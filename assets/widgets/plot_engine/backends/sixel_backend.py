@@ -1,5 +1,23 @@
 # backends/sixel_backend.py
 
+"""
+Sixel backend for rendering Matplotlib figures as terminal graphics.
+
+This module defines `SixelPlotWidget`, a Textual widget that converts a
+Matplotlib figure into a Pillow (PIL) image and then displays it using the
+`SixelImage` widget from the `textual-image` package.  The widget falls back
+to an error message when the optional dependencies are not installed.
+
+The implementation is deliberately lightweight:
+* It builds the figure using the shared `build_matplotlib_figure` helper.
+* The figure is saved to an in‑memory PNG buffer.
+* Pillow loads the PNG into an `Image` object.
+* `SixelImage` renders the image as a sixel graphic directly in the terminal.
+
+All heavy lifting (Matplotlib rendering) is performed off‑screen using the
+Agg backend, so no GUI window is required.
+"""
+
 from __future__ import annotations
 
 import io
@@ -29,11 +47,17 @@ if TYPE_CHECKING:
     from plot_callback import PlotData
 
 
+# ----------------------------------------------------------------------
+# Widget definition
+# ----------------------------------------------------------------------
 class SixelPlotWidget(Widget):
     """
     Renders the matplotlib figure as an image using textual-image SixelImage.
     """
 
+    # ------------------------------------------------------------------
+    # Styling
+    # ------------------------------------------------------------------
     DEFAULT_CSS = """
     SixelPlotWidget {
         width: 100%;
@@ -63,6 +87,9 @@ class SixelPlotWidget(Widget):
     }
     """
 
+    # ------------------------------------------------------------------
+    # Initialization
+    # ------------------------------------------------------------------
     def __init__(
         self,
         plot_data: "PlotData",
@@ -71,11 +98,33 @@ class SixelPlotWidget(Widget):
         id: str | None = None,
         classes: str | None = None,
     ) -> None:
+        """
+        Create a new SixelPlotWidget.
+
+        Parameters
+        ----------
+        plot_data: PlotData
+            The data and configuration required to build the Matplotlib figure.
+        temp_dir: Path | None
+            Unused placeholder kept for API compatibility with other backends.
+        id, classes:
+            Standard Textual widget identifiers.
+        """
         super().__init__(id=id, classes=classes)
         self._plot_data = plot_data
         self._pil_image: "PILImage.Image | None" = None
 
+    # ------------------------------------------------------------------
+    # UI composition
+    # ------------------------------------------------------------------
     def compose(self) -> ComposeResult:
+        """
+        Build the widget's initial UI.
+
+        If the optional `textual-image` package is missing, an error message
+        is shown. Otherwise a container with a loading placeholder is created;
+        the actual image will be mounted later once rendering completes.
+        """
         if not HAS_TEXTUAL_IMAGE:
             yield Static(
                 "[red]Error: textual-image is not installed.\n"
@@ -88,11 +137,29 @@ class SixelPlotWidget(Widget):
                 id="image-container",
             )
 
+    # ------------------------------------------------------------------
+    # Lifecycle hook – mount
+    # ------------------------------------------------------------------
     def on_mount(self) -> None:
+        """
+        Called by Textual when the widget is added to the DOM.
+
+        Triggers the image rendering process if the required dependencies are
+        available.
+        """
         if HAS_TEXTUAL_IMAGE:
             self._render_image()
 
+    # ------------------------------------------------------------------
+    # Rendering helper
+    # ------------------------------------------------------------------
     def _render_image(self) -> None:
+        """
+        Generate the Matplotlib figure, convert it to a Pillow image, and
+        replace the loading placeholder with a `SixelImage` widget.
+
+        Errors during rendering are caught and displayed in the UI.
+        """
         container = self.query_one("#image-container", Container)
 
         try:
@@ -111,6 +178,7 @@ class SixelPlotWidget(Widget):
             container.mount(image_widget)
 
         except Exception as exc:
+            # Show a friendly error message if something goes wrong
             try:
                 loading = self.query_one("#loading-msg", Static)
                 loading.update(f"[red]Image render error: {exc}[/red]")
@@ -119,8 +187,20 @@ class SixelPlotWidget(Widget):
             except Exception:
                 pass
 
+    # ------------------------------------------------------------------
+    # Figure → Pillow conversion
+    # ------------------------------------------------------------------
     def _create_pil_image(self) -> "PILImage.Image":
-        """Create a PIL Image from the matplotlib figure (in memory)."""
+        """
+        Build a Matplotlib figure using the shared helper and return it as a
+        Pillow `Image` object.
+
+        The function:
+        1. Switches Matplotlib to the non‑interactive Agg backend.
+        2. Calls `build_matplotlib_figure` to obtain a Figure/Axes pair.
+        3. Saves the figure to an in‑memory PNG buffer.
+        4. Loads the PNG data into a Pillow image and returns a copy.
+        """
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
@@ -141,8 +221,17 @@ class SixelPlotWidget(Widget):
 
         return pil_image
 
+    # ------------------------------------------------------------------
+    # Public API – refresh
+    # ------------------------------------------------------------------
     def refresh_plot(self) -> None:
-        """Re-render the plot after data changes."""
+        """
+        Re‑render the plot after the underlying data has changed.
+
+        The method clears any existing image widget, shows the loading
+        placeholder again, and then calls `_render_image` to generate a fresh
+        image.
+        """
         if not HAS_TEXTUAL_IMAGE:
             return
 
@@ -160,8 +249,15 @@ class SixelPlotWidget(Widget):
         # Re-render
         self._render_image()
 
+    # ------------------------------------------------------------------
+    # Cleanup
+    # ------------------------------------------------------------------
     def cleanup(self) -> None:
-        """Clean up PIL image reference."""
+        """
+        Release the Pillow image resource when the widget is no longer needed.
+
+        This helps avoid holding onto large image buffers in memory.
+        """
         if self._pil_image:
             self._pil_image.close()
             self._pil_image = None
