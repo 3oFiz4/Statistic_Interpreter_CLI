@@ -1,0 +1,31 @@
+{
+  "viewer_custom_formats": true,
+  "viewer_custom_formats_list": [
+    {
+      "name": "SmallAmount",
+      "for_columns": ["nominal", "amount", "price"],
+      "regex": "^[1-9]$|^[1-4]\\d$",
+      "color": "#888888"
+    },
+    {
+      "name": "MediumAmount",
+      "for_columns": ["nominal", "amount", "price"],
+      "regex": "^[5-9]\\d$",
+      "color": "#00ff00"
+    },
+    {
+      "name": "LargeAmount",
+      "for_columns": ["nominal", "amount", "price"],
+      "regex": "^\\d{3,}$",
+      "color": "#ffaa00",
+      "bold": true
+    },
+    {
+      "name": "NegativeValue",
+      "for_columns": ["nominal", "amount", "balance"],
+      "regex": "^-",
+      "color": "#ff4444",
+      "bold": true
+    }
+  ]
+}
