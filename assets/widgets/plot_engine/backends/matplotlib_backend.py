@@ -1,4 +1,20 @@
 # backends/matplotlib_backend.py
+"""
+Matplotlib backend for the PlotEngine.
+
+This module provides a Textual widget that displays a simple "View Plot"
+button. When the button is pressed, a Matplotlib figure is built from the
+provided ``PlotData`` and shown in an external window using the TkAgg
+backend. The heavy lifting of figure construction is delegated to the
+private ``_build_figure_for_display`` helper, which mirrors the logic used
+by the other backends (e.g., the Sixel and Plotext backends) but forces
+the interactive TkAgg backend so the window can be displayed without
+blocking the Textual UI thread.
+
+Only comments have been added; the runtime behaviour of the code is
+unchanged.
+"""
+
 from __future__ import annotations
 
 import threading
@@ -52,9 +68,11 @@ class MatplotlibPlotWidget(Widget):
     """
 
     class PlotOpened(Message):
+        """Message posted when the external Matplotlib window is opened."""
         pass
 
     class PlotClosed(Message):
+        """Message posted when the external Matplotlib window is closed."""
         pass
 
     def __init__(
@@ -69,6 +87,7 @@ class MatplotlibPlotWidget(Widget):
         self._plot_thread: threading.Thread | None = None
 
     def compose(self) -> ComposeResult:
+        """Compose the UI: a button and a status text."""
         with Center():
             with Vertical():
                 yield Center(
@@ -81,6 +100,7 @@ class MatplotlibPlotWidget(Widget):
                 )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button press – start the Matplotlib window if the correct button."""
         if event.button.id == "mpl-view-btn":
             self._open_matplotlib_window()
 
@@ -96,6 +116,7 @@ class MatplotlibPlotWidget(Widget):
         widget_self = self
 
         def _show():
+            """Thread target: build the figure, show it, and report back to the UI."""
             try:
                 import matplotlib
                 # Must set backend BEFORE importing pyplot
@@ -119,6 +140,7 @@ class MatplotlibPlotWidget(Widget):
                 app.call_from_thread(_on_error, error_msg)
 
         def _on_closed():
+            """Callback executed on the main thread after the plot window closes."""
             try:
                 status = widget_self.query_one("#mpl-status", Static)
                 status.update("Plot window closed. Click to reopen.")
@@ -127,6 +149,7 @@ class MatplotlibPlotWidget(Widget):
                 pass
 
         def _on_error(error_msg: str):
+            """Callback executed on the main thread if an exception occurs."""
             try:
                 status = widget_self.query_one("#mpl-status", Static)
                 status.update(f"[red]Error: {error_msg}[/red]")
@@ -140,7 +163,12 @@ class MatplotlibPlotWidget(Widget):
 def _build_figure_for_display(data):
     """
     Build a matplotlib figure using TkAgg backend for interactive display.
-    Duplicates the logic from build_matplotlib_figure but for TkAgg.
+
+    This function mirrors the logic used by the shared ``build_matplotlib_figure``
+    helper but constructs the figure directly with the TkAgg backend, which is
+    required for the external window opened by ``MatplotlibPlotWidget``.
+    It handles all supported plot types, optional statistical overlays, and
+    legend creation based on the contents of the supplied ``PlotData`` instance.
     """
     import numpy as np
     import matplotlib.pyplot as plt
@@ -149,6 +177,7 @@ def _build_figure_for_display(data):
     fig, ax = plt.subplots(figsize=data._figsize, dpi=data._dpi)
 
     def _draw_series(ax, x, y, plot_type, color, label):
+        """Draw a single data series according to its PlotType."""
         if plot_type == PlotType.LINE:
             if x and y:
                 ax.plot(x, y, color=color or None, label=label or None)
@@ -176,7 +205,7 @@ def _build_figure_for_display(data):
             if box_data:
                 ax.boxplot(box_data, vert=True)
 
-    # Draw primary data
+    # Draw primary data series
     has_x = bool(data._x)
     has_y = bool(data._y)
 
@@ -190,11 +219,11 @@ def _build_figure_for_display(data):
             "",
         )
 
-    # Draw additional series
+    # Draw any additional series defined in PlotData
     for s in data.series:
         _draw_series(ax, s["x"], s["y"], s["plot_type"], s["color"], s["label"])
 
-    # Overlays
+    # Overlays: mean, median, normal distribution, and stats box
     values = data._y if data._y else data._x
     if values:
         if data._show_mean:
@@ -255,6 +284,7 @@ def _build_figure_for_display(data):
                 bbox=dict(boxstyle="round,pad=0.3", facecolor="wheat", alpha=0.8),
             )
 
+    # Axis labels and title
     if data._title:
         ax.set_title(data._title)
     if data._xlabel:
@@ -262,6 +292,7 @@ def _build_figure_for_display(data):
     if data._ylabel:
         ax.set_ylabel(data._ylabel)
 
+    # Legend handling – only add if there are labeled elements
     handles, labels = ax.get_legend_handles_labels()
     if any(labels):
         ax.legend()
