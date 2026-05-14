@@ -1,5 +1,13 @@
 # example_app.py
 
+"""
+Example applications demonstrating the PlotCallback system with multiple backends.
+Provides three demo apps:
+- HistogramApp: interactive histogram with sidebar controls.
+- SimpleLineApp: minimal line plot example.
+- MultiBackendDemoApp: switch between PlotWidget, Sixel, and Matplotlib backends.
+"""
+
 from __future__ import annotations
 
 from textual.app import App, ComposeResult
@@ -40,8 +48,10 @@ HISTOGRAM_DATA = [
 
 class HistogramApp(App[None]):
     """
-    Demo application showing the PlotCallback system embedded in a 
-    sidebar + main content layout with accordion-style controls.
+    Demo application showing the PlotCallback system embedded in a
+    sidebar + main content layout with accordion‑style controls.
+    Users can adjust histogram parameters (bins, overlays, backend) and
+    see the plot update live.
     """
 
     CSS = """
@@ -115,6 +125,10 @@ class HistogramApp(App[None]):
     """
 
     def __init__(self) -> None:
+        """
+        Initialize the PlotCallback with default histogram settings.
+        This object is reused and reconfigured when the user presses "Apply Settings".
+        """
         super().__init__()
         # Initialize the PlotCallback with default settings
         self._plt = (
@@ -130,6 +144,7 @@ class HistogramApp(App[None]):
         )
 
     def compose(self) -> ComposeResult:
+        """Build the UI layout: header, sidebar controls, and main plot area."""
         yield Header(show_clock=True)
 
         with Horizontal(id="main-horizontal"):
@@ -193,12 +208,15 @@ class HistogramApp(App[None]):
     # ── Event Handlers ──────────────────────────────────────────────
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle clicks on the Apply Settings button."""
         if event.button.id == "apply-btn":
             self._apply_settings()
 
     def _apply_settings(self) -> None:
-        """Read all sidebar controls and rebuild the plot."""
-
+        """
+        Read all sidebar controls, update the PlotCallback configuration,
+        and trigger a rebuild of the PlotContainer.
+        """
         # Read bin size
         bin_input = self.query_one("#bin-size-input", Input)
         try:
@@ -234,7 +252,7 @@ class HistogramApp(App[None]):
         plot_container.fallback_mode = new_fallback.value
 
     def _is_checked(self, radio_id: str) -> bool:
-        """Check if a specific RadioButton is pressed."""
+        """Check if a specific RadioButton is pressed (value=True)."""
         try:
             rb = self.query_one(f"#{radio_id}", RadioButton)
             return rb.value
@@ -242,7 +260,7 @@ class HistogramApp(App[None]):
             return False
 
     def _get_radioset_index(self, radio_set: RadioSet) -> int:
-        """Get the index of the currently pressed button in a RadioSet."""
+        """Return the index of the currently pressed button in a RadioSet."""
         try:
             return radio_set.pressed_index
         except Exception:
@@ -252,7 +270,7 @@ class HistogramApp(App[None]):
 class SimpleLineApp(App[None]):
     """
     Minimal example: just shows a line plot using PlotCallback.
-    Demonstrates the simplest usage pattern.
+    Demonstrates the simplest usage pattern without any UI controls.
     """
 
     CSS = """
@@ -264,6 +282,7 @@ class SimpleLineApp(App[None]):
     """
 
     def compose(self) -> ComposeResult:
+        """Compose a header, the plot widget, and a footer."""
         yield Header()
 
         # Create the plot callback
@@ -281,7 +300,8 @@ class SimpleLineApp(App[None]):
 class MultiBackendDemoApp(App[None]):
     """
     Demonstrates switching between all three backends dynamically.
-    Shows three buttons at the top, plot area below.
+    Shows three buttons at the top; clicking a button changes the backend
+    used by the PlotContainer below.
     """
 
     CSS = """
@@ -312,6 +332,10 @@ class MultiBackendDemoApp(App[None]):
     """
 
     def __init__(self) -> None:
+        """
+        Initialize a PlotCallback with a line plot.
+        The fallback can be changed at runtime via the UI buttons.
+        """
         super().__init__()
         self._plt = (
             PlotCallback(fallback=PlotFallback.PLOTWIDGET)
@@ -326,6 +350,7 @@ class MultiBackendDemoApp(App[None]):
         )
 
     def compose(self) -> ComposeResult:
+        """Build the UI: header, backend selector buttons, info bar, and plot area."""
         yield Header()
 
         with Center(id="controls"):
@@ -345,6 +370,7 @@ class MultiBackendDemoApp(App[None]):
         yield Footer()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle backend‑switch button clicks and update the plot container."""
         backend_map = {
             "btn-plotwidget": PlotFallback.PLOTWIDGET,
             "btn-sixel": PlotFallback.SIXEL,
