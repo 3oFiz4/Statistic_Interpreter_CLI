@@ -18,6 +18,16 @@ from textual.containers import Horizontal
 from textual.widgets import Input, Static
 
 
+# ----------------------------------------------------------------------
+# InputBox widget
+# ----------------------------------------------------------------------
+# This widget combines an optional label with a Textual ``Input`` field.
+# It maintains a reactive ``value`` attribute that mirrors the content
+# of the underlying ``Input`` widget.  Whenever the user types, the
+# widget updates ``value`` and emits a custom ``Changed`` message so
+# that parent components can react instantly (per keystroke, without
+# waiting for the user to press Enter).  The widget also supports
+# programmatic updates via ``set_value`` while keeping the UI in sync.
 class InputBox(Widget):
     """A minimal, reactive input component."""
 
@@ -72,8 +82,14 @@ InputBox {
     }
     """
 
+    # Reactive attribute that stores the current text value.
     value: reactive[str] = reactive("")
 
+    # ------------------------------------------------------------------
+    # Message class
+    # ------------------------------------------------------------------
+    # Emitted whenever the input text changes.  It carries a reference
+    # to the originating ``InputBox`` instance and the new string value.
     class Changed(Message):
         """Posted whenever the input text changes (per keystroke)."""
 
@@ -86,6 +102,15 @@ InputBox {
         def control(self) -> InputBox:
             return self.input_box
 
+    # ------------------------------------------------------------------
+    # Constructor
+    # ------------------------------------------------------------------
+    # Parameters:
+    #   label       – Optional static label displayed left of the field.
+    #   value       – Initial text value.
+    #   placeholder – Placeholder text shown when the field is empty.
+    #   password    – If True, masks input (useful for passwords).
+    #   name/id/classes – Standard widget identification arguments.
     def __init__(
         self,
         label: str | None = None,
@@ -106,6 +131,12 @@ InputBox {
         # initialize reactive value
         self.value = value
 
+    # ------------------------------------------------------------------
+    # Compose UI
+    # ------------------------------------------------------------------
+    # Builds a horizontal container with an optional label and the
+    # Textual ``Input`` widget.  The ``Input`` receives the initial
+    # value, placeholder, and password flag.
     def compose(self) -> ComposeResult:
         with Horizontal(classes="in-row"):
             if self._label:
@@ -117,10 +148,21 @@ InputBox {
                 classes="in-field",
             )
 
+    # ------------------------------------------------------------------
+    # Public API – set_value
+    # ------------------------------------------------------------------
+    # Allows external code to change the widget's value.  The reactive
+    # ``value`` setter triggers ``watch_value`` which updates the UI.
     def set_value(self, value: str) -> None:
         """Programmatically set the value (updates the Input widget too)."""
         self.value = value  # watch_value will sync the widget
 
+    # ------------------------------------------------------------------
+    # Reactive watcher – watch_value
+    # ------------------------------------------------------------------
+    # Called automatically when ``self.value`` changes.  It ensures the
+    # underlying ``Input`` widget reflects the new value, avoiding
+    # infinite loops via the ``_syncing`` guard.
     def watch_value(self, value: str) -> None:
         """Keep the Input widget in sync if value changes programmatically."""
         if self._syncing:
@@ -136,6 +178,12 @@ InputBox {
             finally:
                 self._syncing = False
 
+    # ------------------------------------------------------------------
+    # Event handler – _on_input_changed
+    # ------------------------------------------------------------------
+    # Reacts to the ``Input.Changed`` event from the child ``Input``.
+    # Updates the reactive ``value`` and posts the custom ``Changed``
+    # message so external listeners can react instantly.
     @on(Input.Changed, ".in-field")
     def _on_input_changed(self, event: Input.Changed) -> None:
         """Update reactive value on every keystroke and post Changed."""
@@ -152,9 +200,10 @@ InputBox {
 
 
 # ─────────────────────────────────────────────────────────────
-# Demo
+# Demo application
 # ─────────────────────────────────────────────────────────────
-
+# Shows the InputBox in action.  The demo updates a static text
+# element with the current value each time the user types.
 class DemoApp(App):
     CSS = """
     Screen {
