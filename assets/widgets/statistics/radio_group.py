@@ -5,9 +5,9 @@ Provides a reusable, configurable group of radio buttons with a header that
 displays the current selection.  The component mirrors the API and styling
 conventions of the DropBox widget in this project.
 """
-# ------------------------------------------------------------
+
 # Imports
-# ------------------------------------------------------------
+
 from __future__ import annotations
 
 from textual import on
@@ -18,12 +18,8 @@ from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import RadioButton, RadioSet, Static
-from ..themes.crimson_demon import LoadTheme  # temporary, delete when finish
 
-
-# ------------------------------------------------------------
 # RadioGroup widget
-# ------------------------------------------------------------
 class RadioGroup(Widget):
     """A configurable, reusable radio-button group component.
 
@@ -33,12 +29,9 @@ class RadioGroup(Widget):
     selection changes.
     """
 
-    # ── CSS ──────────────────────────────────────────────────
     # Follows the same structural conventions as the reference
     # DropBox component: compact sizing, $primary/$surface
     # palette tokens, clear hover/focus feedback.
-    # ─────────────────────────────────────────────────────────
-
     DEFAULT_CSS = """
     RadioGroup {
         height: auto;
@@ -111,11 +104,11 @@ class RadioGroup(Widget):
     }
     """
 
-    # ── Reactive state ───────────────────────────────────────
+    #  Reactive state 
 
     selected_index: reactive[int | None] = reactive[int | None](None)
 
-    # ── Messages ─────────────────────────────────────────────
+    #  Messages 
 
     class Changed(Message):
         """Posted when the selected radio button changes."""
@@ -135,7 +128,7 @@ class RadioGroup(Widget):
         def control(self) -> RadioGroup:
             return self.radio_group
 
-    # ── Constructor ──────────────────────────────────────────
+    #  Constructor 
 
     def __init__(
         self,
@@ -163,7 +156,7 @@ class RadioGroup(Widget):
         self._options: list[str] = list(options or [])
         self._default: str | None = default
 
-    # ── Compose ──────────────────────────────────────────────
+    #  Compose 
 
     def compose(self) -> ComposeResult:
         """Build the widget hierarchy.
@@ -184,7 +177,7 @@ class RadioGroup(Widget):
             else:
                 yield Static("(no options)", classes="rg-empty")
 
-    # ── Public properties ────────────────────────────────────
+    #  Public properties 
 
     @property
     def selected_value(self) -> str | None:
@@ -207,7 +200,7 @@ class RadioGroup(Widget):
         """Return a copy of the current option list."""
         return list(self._options)
 
-    # ── Public mutators ──────────────────────────────────────
+    #Public mutators 
 
     def set_options(
         self,
@@ -278,7 +271,7 @@ class RadioGroup(Widget):
         except NoMatches:
             pass
 
-    # ── Internal helpers ─────────────────────────────────────
+    #  Internal helpers 
 
     def _make_header(self) -> str:
         """Construct the header text showing label and current selection."""
@@ -292,8 +285,7 @@ class RadioGroup(Widget):
         except NoMatches:
             pass
 
-    # ── Event handling ───────────────────────────────────────
-
+    #  Event handling 
     @on(RadioSet.Changed, "#rg-radioset")
     def _on_radio_changed(self, event: RadioSet.Changed) -> None:
         """Handle user interaction with the RadioSet.
@@ -315,11 +307,7 @@ class RadioGroup(Widget):
         )
 
 
-# ─────────────────────────────────────────────────────────────
 # Demo
-# ─────────────────────────────────────────────────────────────
-
-
 class DemoApp(App):
     """Tiny app that exercises the RadioGroup component."""
 

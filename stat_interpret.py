@@ -44,25 +44,23 @@ from textual.widgets import (
     Static,
 )
 
-# Theme loader (crimson demon theme)
+# t loader (crimson demon theme)
 from assets.themes.crimson_demon import LoadTheme
 
 # Core services
-from assets.services.file_loader import FileLoader
-from assets.services.measurement_classifer import MeasurementClassifier
-from assets.services.statistics_engine import StatisticsEngine
-from assets.services.file_change_observer import FileObserver
+from assets.services.statistics.file_loader import FileLoader
+from assets.services.statistics.measurement_classifer import MeasurementClassifier
+from assets.services.statistics.statistics_engine import StatisticsEngine
+from assets.services.statistics.file_change_observer import FileObserver
 
 # Custom widgets
-from assets.widgets.drop_box import DropBox
-from assets.widgets.radio_group import RadioGroup
-from assets.widgets.input_box import InputBox
-from assets.widgets.graph import Histogram
+from assets.widgets.statistics.drop_box import DropBox
+from assets.widgets.statistics.radio_group import RadioGroup
+from assets.widgets.statistics.input_box import InputBox
+from assets.widgets.statistics.graph import Histogram
 
 
-# ---------------------------------------------------------------------------
 # Helper widget: a panel of checkboxes that notifies when its selection changes
-# ---------------------------------------------------------------------------
 class CheckboxPanel(Widget):
     """A toggleable panel of checkboxes."""
 
