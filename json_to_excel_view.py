@@ -36,12 +36,12 @@ from assets.widgets.viewer.add_column import AddColumnScreen
 from assets.widgets.viewer.find_replace import FindReplaceScreen
 from assets.themes.crimson_demon import LoadTheme
 from assets.widgets.viewer.formatter import (
-    build_default_config,
     apply_rules,
     RuleContext,
     FormatRule,          # only needed if rules added at runtime
     TableFormattingConfig,
 )
+from formatter.view_format import BuildViewFormat
 
 #> Configurable Variables
 MAX_UNDO_HISTORY = 50       # max number of undo states kept in memory
@@ -236,7 +236,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
         #  misc
         self.custom_formats: List[Dict[str, Any]] = []
         self._last_mtime:    float | None          = None
-        self._fmt_cfg = build_default_config()   # ← add this one line
+        self._fmt_cfg = BuildViewFormat()   # ← add this one line
 
     def compose(self) -> ComposeResult: # ui
         yield Static("", id="title-bar")

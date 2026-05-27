@@ -43,6 +43,7 @@ from textual.widgets import (
     Select,
     Static,
 )
+from rich.text import Text
 
 # t loader (crimson demon theme)
 from assets.themes.crimson_demon import LoadTheme
@@ -58,7 +59,14 @@ from assets.widgets.statistics.drop_box import DropBox
 from assets.widgets.statistics.radio_group import RadioGroup
 from assets.widgets.statistics.input_box import InputBox
 from assets.widgets.statistics.graph import Histogram
-
+from assets.widgets.utils.formatter import build_stats_config, apply_rules, RuleContext # cross
+from assets.widgets.utils.formatter import (
+    apply_rules,
+    RuleContext,
+    FormatRule,          # only needed if rules added at runtime
+    TableFormattingConfig,
+)
+from formatter.stat_format import BuildStatFormat
 
 # Helper widget: a panel of checkboxes that notifies when its selection changes
 class CheckboxPanel(Widget):
@@ -124,9 +132,7 @@ class CheckboxPanel(Widget):
             return False
 
 
-# ---------------------------------------------------------------------------
 # Main Textual application
-# ---------------------------------------------------------------------------
 class StatisticalInterpreterApp(App):
     """Main Textual application for statistical interpretation."""
 
@@ -172,6 +178,7 @@ class StatisticalInterpreterApp(App):
         self.file_loader: Optional[FileLoader] = None
         self.classifier: Optional[MeasurementClassifier] = None
         self.engine = StatisticsEngine()
+        self._fmt_cfg = build_stats_config()
         # Full list of supported statistics (displayed in the stats dropdown)
         self._stats_options = [
             "Mean",
@@ -407,11 +414,9 @@ class StatisticalInterpreterApp(App):
         self.selected_stats = event.selected
         self._update_results_table()
 
-    # -----------------------------------------------------------------------
     # Table rendering
-    # -----------------------------------------------------------------------
     def _update_results_table(self) -> None:
-        """Re‑populate the results DataTable based on current selections."""
+        """Re-populate the results DataTable based on current selections."""
         if not self.file_loader or not self.classifier:
             return
 
@@ -421,41 +426,106 @@ class StatisticalInterpreterApp(App):
         if not self.selected_stats:
             return
 
-        # Fixed columns
-        table.add_column("Key", key="key")
+        # ── Columns ──────────────────────────────────────────────────────────────
+        table.add_column("Key",   key="key")
         table.add_column("Level", key="level")
-        # Dynamic statistic columns
         for stat in self.selected_stats:
             table.add_column(stat, key=stat.lower())
 
+        # visible_cols mirrors column insertion order — used by RuleContext
+        visible_cols = ["key", "level"] + [s.lower() for s in self.selected_stats]
+
         def fmt(v: Any) -> str:
-            """Format a value for display in the table."""
+            """Format a raw value for initial display."""
             if v is None:
                 return "—"
             if isinstance(v, float):
                 return f"{v:.4f}" if v != int(v) else str(int(v))
             return str(v)
 
-        # Metric columns – numeric stats
+        # Pre-sort rules once per render
+        sorted_rules = sorted(self._fmt_cfg.rules, key=lambda r: r.priority)
+
+        # ── Stripe helper ─────────────────────────────────────────────────────────
+        row_counter = 0   # counts only visible rows for correct stripe alternation
+
+        def _add_row(key: str, level: str, raw_stats: dict) -> None:
+            nonlocal row_counter
+            row_counter += 1
+
+            # Build the row_dict the rule engine reads
+            # raw_stats maps stat_name → raw Python value (pre-fmt)
+            row_dict = {"key": key, "level": level, **raw_stats}
+
+            # ── Zebra stripe via stylize(), never markup ──────────────────────────
+            stripe = (
+                self._fmt_cfg.stripe_even if row_counter % 2 == 0 and self._fmt_cfg.stripe_even else
+                self._fmt_cfg.stripe_odd  if row_counter % 2 != 0 and self._fmt_cfg.stripe_odd  else
+                ""
+            )
+
+            row_data: list[Text] = []
+
+            for col in visible_cols:
+                # Raw value: "key" and "level" are strings; stats are numeric
+                if col == "key":
+                    raw = key
+                elif col == "level":
+                    raw = level
+                else:
+                    raw = raw_stats.get(col)          # actual Python int/float/None
+
+                # Initial display string (formatted but unstyled)
+                start = fmt(raw)
+
+                # ── Rule engine ──────────────────────────────────────────────────
+                final = apply_rules(
+                    rules       = sorted_rules,
+                    row         = row_dict,
+                    col         = col,
+                    cell        = raw,
+                    idx         = row_counter - 1,
+                    display_idx = row_counter,
+                    all_data    = [],          # no global dataset in stats view
+                    col_keys    = visible_cols,
+                )
+
+                # Use rule output when it changed; otherwise use fmt() output
+                display_str = final if final != str(raw if raw is not None else "") else start
+
+                # ── Apply stripe as a span — never as a markup tag ───────────────
+                cell_text = Text.from_markup(display_str)
+                if stripe and "on " not in display_str:
+                    cell_text.stylize(stripe)
+
+                row_data.append(cell_text)
+
+            table.add_row(*row_data)
+
+        # ── Metric rows ───────────────────────────────────────────────────────────
         for key in self.selected_metric_keys:
-            values = self.file_loader.get_numeric_column(key)
-            stats = self.engine.compute_metric_stats(values, self.selected_stats)
-            row = [key, "Metric"] + [fmt(stats.get(s)) for s in self.selected_stats]
-            table.add_row(*row)
+            values    = self.file_loader.get_numeric_column(key)
+            stats     = self.engine.compute_metric_stats(values, self.selected_stats)
+            raw_stats = {s.lower(): stats.get(s) for s in self.selected_stats}
+            _add_row(key, "Metric", raw_stats)
 
-        # Ordinal columns – treat as generic values
+        # ── Ordinal rows ──────────────────────────────────────────────────────────
         for key in self.selected_ordinal_keys:
-            values = self.file_loader.get_column(key)
-            stats = self.engine.compute_ordinal_stats(values, self.selected_stats)
-            row = [key, "Ordinal"] + [fmt(stats.get(s)) for s in self.selected_stats]
-            table.add_row(*row)
+            values    = self.file_loader.get_column(key)
+            stats     = self.engine.compute_ordinal_stats(values, self.selected_stats)
+            raw_stats = {s.lower(): stats.get(s) for s in self.selected_stats}
+            _add_row(key, "Ordinal", raw_stats)
 
-        # Nominal columns – treat as generic values
+        # ── Nominal rows ──────────────────────────────────────────────────────────
         for key in self.selected_nominal_keys:
-            values = self.file_loader.get_column(key)
-            stats = self.engine.compute_nominal_stats(values, self.selected_stats)
-            row = [key, "Nominal"] + [fmt(stats.get(s)) for s in self.selected_stats]
-            table.add_row(*row)
+            values    = self.file_loader.get_column(key)
+            stats     = self.engine.compute_nominal_stats(values, self.selected_stats)
+            raw_stats = {s.lower(): stats.get(s) for s in self.selected_stats}
+            _add_row(key, "Nominal", raw_stats)
+
+        table.focus()
+        table.refresh()   # ✅ redraws the widget
+        self.refresh()    # ✅ repaints the screen
 
 
 def main() -> None:
