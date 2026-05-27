@@ -60,7 +60,6 @@ from assets.widgets.statistics.radio_group import RadioGroup
 from assets.widgets.statistics.input_box import InputBox
 from assets.widgets.statistics.graph import Histogram
 from assets.widgets.utils.formatter import (
-    build_stats_config,
     apply_rules,
     RuleContext,
 )  # cross
@@ -164,6 +163,14 @@ class StatisticalInterpreterApp(App):
         padding: 0;
         margin: 0;
     }
+    .desc-bar {
+        height: 1;
+        width: 100%;
+        background: $primary 15%;
+        color: $text-muted;
+        text-style: italic;
+        padding: 0 1;
+    }
     """
 
     # Reactive state – automatically triggers UI updates when changed
@@ -182,74 +189,14 @@ class StatisticalInterpreterApp(App):
         self.classifier: Optional[MeasurementClassifier] = None
         self.engine = StatisticsEngine()
         histogram_widget = Histogram()
-        self._fmt_cfg = build_stats_config()
-        # Full list of supported statistics (displayed in the stats dropdown)
-        self._stats_options = [
-            "Mean",
-            "Median",
-            "Mode",
-            "Sum",
-            "Variance",
-            "STDV",
-            "Minimum",
-            "Maximum",
-            "Range",
-            "Quartile 1",
-            "Quartile 2",
-            "Quartile 3",
-            "IQR",
-            "Median Absolute Deviation",
-            "Skew",
-            "Kurtosis",
-            "n",
-            "95% CI",
-            "Mean +- Std.",
-            "Count Unique",
-            "Count Missing",
-            "Percentage Missing",
-            "First Quartile Spread",
-            "Third Quartile Spread",
-            "Median Difference",
-            "Midrange",
-            "Quartile Deviation",
-            "Central 50% Range",
-            "Central 80% Range",
-            "Percentile 10",
-            "Percentile 90",
-            "Lower Outlier Boundary",
-            "Upper Outlier Boundary",
-            "Outlier Values",
-            "Outlier Count",
-            "Coefficient of Variation",
-            "Mean Absolute Deviation",
-            "Trimmed Mean",
-            "Spread Score",
-            "Range Percentage",
-            "Interval Width",
-            "Bin Count",
-            "Data Span",
-            "Duplicate Count",
-            "Data Density",
-            "Positive Count",
-            "Negative Count",
-            "Zero Count",
-            "Even Count",
-            "Odd Count",
-            "Above Mean Count",
-            "Below Mean Count",
-            "Closest to Mean",
-            "Farthest from Mean",
-            "Lower Half Mean",
-            "Upper Half Mean",
-            "Data Balance",
-            "Symmetry Score",
-            "Normalized Mean",
-            "Normalized STDV",
-            "Peak Density",
-            "Data Uniformity",
-            "Value Concentration",
-        ]
-        # Default stats shown when a file is first loaded
+        self._fmt_cfg = BuildStatFormat()
+        self._stat_descriptions: dict[str, str] = (
+            StatisticsEngine.get_stat_descriptions()
+        )
+        self._stats_options = list(StatisticsEngine.METRIC_STATS.keys())
+        self._stat_descriptions: dict[str, str] = (
+            StatisticsEngine.get_stat_descriptions()
+        )
         self._stats_default_options = [
             "Mean",
             "Median",
@@ -285,6 +232,10 @@ class StatisticalInterpreterApp(App):
             self.load_data(self.filepath)
             self.set_interval(self.POLL_INTERVAL, self._poll_file_changes)
 
+        # Watch hover_coordinate changes on the results table
+        table = self.query_one("#results-table", DataTable)
+        self.watch(table, "hover_coordinate", self._on_table_hover)
+
     def compose(self) -> ComposeResult:
         """Build the UI layout."""
         with VerticalScroll(id="main-container"):
@@ -316,6 +267,7 @@ class StatisticalInterpreterApp(App):
             with Container(classes="results-container"):
                 yield Label("Results", classes="section-title")
                 yield DataTable(id="results-table", zebra_stripes=True)
+                yield Label("", id="desc-bar", classes="desc-bar")
 
             # Histogram widget (placeholder for future visualizations)
             with Vertical():
@@ -432,6 +384,50 @@ class StatisticalInterpreterApp(App):
         self.selected_stats = event.selected
         self._update_results_table()
 
+    @on(DataTable.HeaderSelected, "#results-table")
+    def on_header_selected(self, event: DataTable.HeaderSelected) -> None:
+        """Show stat description when a column header is clicked."""
+        label = str(event.label)
+        desc = self._stat_descriptions.get(label, "")
+        if desc:
+            self.notify(desc, title=label, severity="information", timeout=5)
+
+    def _on_table_hover(self, coordinate) -> None:
+        """Show stat description in a bottom bar when hovering over a table cell."""
+        if coordinate is None:
+            self._update_desc_bar("")
+            return
+
+        table = self.query_one("#results-table", DataTable)
+
+        # coordinate.column is the column index
+        col_idx = coordinate.column
+        if col_idx < 0:
+            self._update_desc_bar("")
+            return
+
+        # Get the column key from ordered columns
+        try:
+            columns = list(table.columns)
+            if col_idx >= len(columns):
+                self._update_desc_bar("")
+                return
+            col_key = columns[col_idx]
+            col_label = str(table.columns[col_key].label)
+        except (IndexError, KeyError):
+            self._update_desc_bar("")
+            return
+
+        desc = self._stat_descriptions.get(col_label, "")
+        self._update_desc_bar(f"{col_label}: {desc}" if desc else "")
+
+    def _update_desc_bar(self, text: str) -> None:
+        """Update the description label below the table."""
+        try:
+            self.query_one("#desc-bar", Label).update(text)
+        except NoMatches:
+            pass
+
     # Table rendering
     def _update_results_table(self) -> None:
         """Re-populate the results DataTable based on current selections."""
@@ -458,7 +454,7 @@ class StatisticalInterpreterApp(App):
             if v is None:
                 return "—"
             if isinstance(v, float):
-                return f"{v:.4f}" if v != int(v) else str(int(v))
+                return f"{v:4f}" if v != v else str(int(v))
             return str(v)
 
         # Pre-sort rules once per render

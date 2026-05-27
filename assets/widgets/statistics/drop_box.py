@@ -240,7 +240,9 @@ class DropBox(Widget):
     # --------------------------------------------------------------------- #
     # Public API for dynamically updating the options list.
     # --------------------------------------------------------------------- #
-    def set_options(self, options: list[str], selected: list[str] | None = None) -> None:
+    def set_options(
+        self, options: list[str], selected: list[str] | None = None
+    ) -> None:
         """Replace the option list and optionally set a new selection.
 
         The panel is cleared and rebuilt with fresh ``Checkbox`` widgets.
