@@ -59,14 +59,19 @@ from assets.widgets.statistics.drop_box import DropBox
 from assets.widgets.statistics.radio_group import RadioGroup
 from assets.widgets.statistics.input_box import InputBox
 from assets.widgets.statistics.graph import Histogram
-from assets.widgets.utils.formatter import build_stats_config, apply_rules, RuleContext # cross
+from assets.widgets.utils.formatter import (
+    build_stats_config,
+    apply_rules,
+    RuleContext,
+)  # cross
 from assets.widgets.utils.formatter import (
     apply_rules,
     RuleContext,
-    FormatRule,          # only needed if rules added at runtime
+    FormatRule,  # only needed if rules added at runtime
     TableFormattingConfig,
 )
 from formatter.stat_format import BuildStatFormat
+
 
 # Helper widget: a panel of checkboxes that notifies when its selection changes
 class CheckboxPanel(Widget):
@@ -139,9 +144,7 @@ class StatisticalInterpreterApp(App):
     TITLE = "Statistical Interpreter"
     BINDINGS = [
         Binding("q", "quit", "Quit"),
-        Binding("t", "cycle_theme", "Theme"),
         Binding("r", "refresh", "Refresh"),
-        Binding("o", "open_file", "Open"),
     ]
     DEFAULT_CSS = """
     .measurement-container {
@@ -178,6 +181,7 @@ class StatisticalInterpreterApp(App):
         self.file_loader: Optional[FileLoader] = None
         self.classifier: Optional[MeasurementClassifier] = None
         self.engine = StatisticsEngine()
+        histogram_widget = Histogram()
         self._fmt_cfg = build_stats_config()
         # Full list of supported statistics (displayed in the stats dropdown)
         self._stats_options = [
@@ -290,15 +294,23 @@ class StatisticalInterpreterApp(App):
             with Container(classes="measurement-container", id="meas-section"):
                 yield Label("Level of Measurement", classes="section-title")
                 with Horizontal(classes="btn-row", id="meas-btns"):
-                    yield DropBox(label="Metric", options=[], selected=[], id="metric-dropdown")
-                    yield DropBox(label="Ordinal", options=[], selected=[], id="ordinal-dropdown")
-                    yield DropBox(label="Nominal", options=[], selected=[], id="nominal-dropdown")
+                    yield DropBox(
+                        label="Metric", options=[], selected=[], id="metric-dropdown"
+                    )
+                    yield DropBox(
+                        label="Ordinal", options=[], selected=[], id="ordinal-dropdown"
+                    )
+                    yield DropBox(
+                        label="Nominal", options=[], selected=[], id="nominal-dropdown"
+                    )
 
             # Statistics selection section
             with Container(classes="stats-container", id="stats-section"):
                 yield Label("Descriptive Statistics", classes="section-title")
                 with Horizontal(classes="btn-row"):
-                    yield DropBox(label="Process", options=[], selected=[], id="stats-dropdown")
+                    yield DropBox(
+                        label="Process", options=[], selected=[], id="stats-dropdown"
+                    )
 
             # Results table
             with Container(classes="results-container"):
@@ -376,9 +388,15 @@ class StatisticalInterpreterApp(App):
         nominal_keys = self.classifier.get_nominal_keys()
 
         # Update the three measurement dropdowns
-        self.query_one("#metric-dropdown", DropBox).set_options(metric_keys, metric_keys)
-        self.query_one("#ordinal-dropdown", DropBox).set_options(ordinal_keys, ordinal_keys)
-        self.query_one("#nominal-dropdown", DropBox).set_options(nominal_keys, nominal_keys)
+        self.query_one("#metric-dropdown", DropBox).set_options(
+            metric_keys, metric_keys
+        )
+        self.query_one("#ordinal-dropdown", DropBox).set_options(
+            ordinal_keys, ordinal_keys
+        )
+        self.query_one("#nominal-dropdown", DropBox).set_options(
+            nominal_keys, nominal_keys
+        )
 
         # Keep reactive selections in sync with the UI
         self.selected_metric_keys = metric_keys.copy()
@@ -427,7 +445,7 @@ class StatisticalInterpreterApp(App):
             return
 
         # ── Columns ──────────────────────────────────────────────────────────────
-        table.add_column("Key",   key="key")
+        table.add_column("Key", key="key")
         table.add_column("Level", key="level")
         for stat in self.selected_stats:
             table.add_column(stat, key=stat.lower())
@@ -447,7 +465,7 @@ class StatisticalInterpreterApp(App):
         sorted_rules = sorted(self._fmt_cfg.rules, key=lambda r: r.priority)
 
         # ── Stripe helper ─────────────────────────────────────────────────────────
-        row_counter = 0   # counts only visible rows for correct stripe alternation
+        row_counter = 0  # counts only visible rows for correct stripe alternation
 
         def _add_row(key: str, level: str, raw_stats: dict) -> None:
             nonlocal row_counter
@@ -459,9 +477,11 @@ class StatisticalInterpreterApp(App):
 
             # ── Zebra stripe via stylize(), never markup ──────────────────────────
             stripe = (
-                self._fmt_cfg.stripe_even if row_counter % 2 == 0 and self._fmt_cfg.stripe_even else
-                self._fmt_cfg.stripe_odd  if row_counter % 2 != 0 and self._fmt_cfg.stripe_odd  else
-                ""
+                self._fmt_cfg.stripe_even
+                if row_counter % 2 == 0 and self._fmt_cfg.stripe_even
+                else self._fmt_cfg.stripe_odd
+                if row_counter % 2 != 0 and self._fmt_cfg.stripe_odd
+                else ""
             )
 
             row_data: list[Text] = []
@@ -473,25 +493,27 @@ class StatisticalInterpreterApp(App):
                 elif col == "level":
                     raw = level
                 else:
-                    raw = raw_stats.get(col)          # actual Python int/float/None
+                    raw = raw_stats.get(col)  # actual Python int/float/None
 
                 # Initial display string (formatted but unstyled)
                 start = fmt(raw)
 
                 # ── Rule engine ──────────────────────────────────────────────────
                 final = apply_rules(
-                    rules       = sorted_rules,
-                    row         = row_dict,
-                    col         = col,
-                    cell        = raw,
-                    idx         = row_counter - 1,
-                    display_idx = row_counter,
-                    all_data    = [],          # no global dataset in stats view
-                    col_keys    = visible_cols,
+                    rules=sorted_rules,
+                    row=row_dict,
+                    col=col,
+                    cell=raw,
+                    idx=row_counter - 1,
+                    display_idx=row_counter,
+                    all_data=[],  # no global dataset in stats view
+                    col_keys=visible_cols,
                 )
 
                 # Use rule output when it changed; otherwise use fmt() output
-                display_str = final if final != str(raw if raw is not None else "") else start
+                display_str = (
+                    final if final != str(raw if raw is not None else "") else start
+                )
 
                 # ── Apply stripe as a span — never as a markup tag ───────────────
                 cell_text = Text.from_markup(display_str)
@@ -504,28 +526,30 @@ class StatisticalInterpreterApp(App):
 
         # ── Metric rows ───────────────────────────────────────────────────────────
         for key in self.selected_metric_keys:
-            values    = self.file_loader.get_numeric_column(key)
-            stats     = self.engine.compute_metric_stats(values, self.selected_stats)
+            values = self.file_loader.get_numeric_column(key)
+            stats = self.engine.compute_metric_stats(values, self.selected_stats)
             raw_stats = {s.lower(): stats.get(s) for s in self.selected_stats}
-            _add_row(key, "Metric", raw_stats)
+            _add_row(
+                key, "Metric", raw_stats
+            )  # {'mean': 180.84208695652174, 'median': 174.77, 'mode': None, 'sum': 20796.84, 'variance': 852.9476096414949, 'stdv': 29.205266813393347, 'minimum': 124.77, 'maximum': 230.86, 'range': 106.09000000000002, 'quartile 1': 155.925, 'quartile 2': 174.77, 'quartile 3': 208.135, 'iqr': 52.20999999999998, 'median absolute deviation': 23.159999999999997, 'skew': 0.10254982707048822, 'kurtosis': -1.3201869043402263, 'n': 115, '95% ci': (np.float64(175.50421281755334), np.float64(186.17996109549014)), 'mean +- std.': '180.8421 ± 29.2053'}
 
         # ── Ordinal rows ──────────────────────────────────────────────────────────
         for key in self.selected_ordinal_keys:
-            values    = self.file_loader.get_column(key)
-            stats     = self.engine.compute_ordinal_stats(values, self.selected_stats)
+            values = self.file_loader.get_column(key)
+            stats = self.engine.compute_ordinal_stats(values, self.selected_stats)
             raw_stats = {s.lower(): stats.get(s) for s in self.selected_stats}
             _add_row(key, "Ordinal", raw_stats)
 
         # ── Nominal rows ──────────────────────────────────────────────────────────
         for key in self.selected_nominal_keys:
-            values    = self.file_loader.get_column(key)
-            stats     = self.engine.compute_nominal_stats(values, self.selected_stats)
+            values = self.file_loader.get_column(key)
+            stats = self.engine.compute_nominal_stats(values, self.selected_stats)
             raw_stats = {s.lower(): stats.get(s) for s in self.selected_stats}
             _add_row(key, "Nominal", raw_stats)
 
         table.focus()
-        table.refresh()   # ✅ redraws the widget
-        self.refresh()    # ✅ repaints the screen
+        table.refresh()  # ✅ redraws the widget
+        self.refresh()  # ✅ repaints the screen
 
 
 def main() -> None:

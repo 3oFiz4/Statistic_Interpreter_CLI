@@ -7,38 +7,27 @@ from scipy import stats as sp_stats
 class StatisticsEngine:
     """Computes descriptive statistics for data columns."""
 
-    # ─────────────────────────────────────────────
     # Helper Functions for External Use
-    # ─────────────────────────────────────────────
-
+    @staticmethod
     def format_tuple(v: Any) -> str:
         if v is None:
             return "—"
 
         if isinstance(v, tuple):
-            return " | ".join(
-                f"{x:.4f}" if isinstance(x, float) else str(x)
-                for x in v
-            )
+            return " | ".join(f"{x:.4f}" if isinstance(x, float) else str(x) for x in v)
 
         if isinstance(v, float):
             return f"{v:.4f}" if v != int(v) else str(int(v))
 
         return str(v)
 
-    # ─────────────────────────────────────────────
     # Internal Utility
-    # ─────────────────────────────────────────────
-
     @staticmethod
     def _to_array(values: list[float]) -> np.ndarray:
         """Converts a list of floats to a NumPy array."""
         return np.asarray(values, dtype=np.float64)
 
-    # =========================
     # BASIC STATS
-    # =========================
-
     @staticmethod
     def mean(values: list[float]) -> Optional[float]:
         if not values:
@@ -210,7 +199,7 @@ class StatisticsEngine:
 
         arr = StatisticsEngine._to_array(values)
         mean = float(np.mean(arr))
-        std  = float(np.std(arr, ddof=1))
+        std = float(np.std(arr, ddof=1))
 
         margin = 1.96 * (std / np.sqrt(n))
 
@@ -219,7 +208,7 @@ class StatisticsEngine:
     @staticmethod
     def mean_pm_std(values: list[float]):
         mean = StatisticsEngine.mean(values)
-        std  = StatisticsEngine.stdv(values)
+        std = StatisticsEngine.stdv(values)
 
         if mean is None or std is None:
             return None
@@ -299,7 +288,7 @@ class StatisticsEngine:
         if not values:
             return None
 
-        mean   = StatisticsEngine.mean(values)
+        mean = StatisticsEngine.mean(values)
         median = StatisticsEngine.median(values)
 
         if mean is None or median is None:
@@ -355,9 +344,9 @@ class StatisticsEngine:
         if not values:
             return None
 
-        counter  = Counter(values)
+        counter = Counter(values)
         min_count = min(counter.values())
-        least    = [k for k, v in counter.items() if v == min_count]
+        least = [k for k, v in counter.items() if v == min_count]
 
         return least[0] if len(least) == 1 else str(least)
 
@@ -373,13 +362,10 @@ class StatisticsEngine:
         if not values:
             return None
 
-        total   = len(values)
+        total = len(values)
         counter = Counter(values)
 
-        return {
-            k: round(v / total, 6)
-            for k, v in counter.most_common()
-        }
+        return {k: round(v / total, 6) for k, v in counter.most_common()}
 
     @staticmethod
     def cumulative_count(values: list) -> Optional[dict]:
@@ -394,7 +380,7 @@ class StatisticsEngine:
             sorted_keys = list(counter.keys())
 
         cumulative = {}
-        running    = 0
+        running = 0
 
         for k in sorted_keys:
             running += counter[k]
@@ -407,7 +393,7 @@ class StatisticsEngine:
         if not values:
             return None
 
-        total   = len(values)
+        total = len(values)
         counter = Counter(values)
 
         try:
@@ -416,7 +402,7 @@ class StatisticsEngine:
             sorted_keys = list(counter.keys())
 
         cumulative = {}
-        running    = 0
+        running = 0
 
         for k in sorted_keys:
             running += counter[k]
@@ -455,7 +441,7 @@ class StatisticsEngine:
 
     @staticmethod
     def lower_outlier_boundary(values: list[float]) -> Optional[float]:
-        q1      = StatisticsEngine.q1(values)
+        q1 = StatisticsEngine.q1(values)
         iqr_val = StatisticsEngine.iqr(values)
 
         if q1 is None or iqr_val is None:
@@ -465,7 +451,7 @@ class StatisticsEngine:
 
     @staticmethod
     def upper_outlier_boundary(values: list[float]) -> Optional[float]:
-        q3      = StatisticsEngine.q3(values)
+        q3 = StatisticsEngine.q3(values)
         iqr_val = StatisticsEngine.iqr(values)
 
         if q3 is None or iqr_val is None:
@@ -478,7 +464,7 @@ class StatisticsEngine:
         if not values:
             return None
 
-        arr   = StatisticsEngine._to_array(values)
+        arr = StatisticsEngine._to_array(values)
         lower = StatisticsEngine.lower_outlier_boundary(values)
         upper = StatisticsEngine.upper_outlier_boundary(values)
 
@@ -505,7 +491,7 @@ class StatisticsEngine:
     @staticmethod
     def coefficient_of_variation(values: list[float]) -> Optional[float]:
         mean = StatisticsEngine.mean(values)
-        std  = StatisticsEngine.stdv(values)
+        std = StatisticsEngine.stdv(values)
 
         if mean is None or std is None or mean == 0:
             return None
@@ -534,7 +520,7 @@ class StatisticsEngine:
     @staticmethod
     def spread_score(values: list[float]) -> Optional[float]:
         std = StatisticsEngine.stdv(values)
-        r   = StatisticsEngine.range_value(values)
+        r = StatisticsEngine.range_value(values)
 
         if std is None or r is None or r == 0:
             return None
@@ -543,7 +529,7 @@ class StatisticsEngine:
 
     @staticmethod
     def range_percentage(values: list[float]) -> Optional[float]:
-        r    = StatisticsEngine.range_value(values)
+        r = StatisticsEngine.range_value(values)
         mean = StatisticsEngine.mean(values)
 
         if r is None or mean is None or mean == 0:
@@ -566,9 +552,9 @@ class StatisticsEngine:
         if n < 2:
             return None
 
-        arr     = StatisticsEngine._to_array(values)
+        arr = StatisticsEngine._to_array(values)
         iqr_val = StatisticsEngine.iqr(values)
-        r       = float(np.ptp(arr))
+        r = float(np.ptp(arr))
 
         if r == 0:
             return None
@@ -655,9 +641,9 @@ class StatisticsEngine:
         if not values:
             return None
 
-        arr       = StatisticsEngine._to_array(values)
-        is_int    = arr == np.floor(arr)
-        is_even   = (arr.astype(np.int64) % 2 == 0)
+        arr = StatisticsEngine._to_array(values)
+        is_int = arr == np.floor(arr)
+        is_even = arr.astype(np.int64) % 2 == 0
 
         return int(np.sum(is_int & is_even))
 
@@ -666,9 +652,9 @@ class StatisticsEngine:
         if not values:
             return None
 
-        arr     = StatisticsEngine._to_array(values)
-        is_int  = arr == np.floor(arr)
-        is_odd  = (arr.astype(np.int64) % 2 != 0)
+        arr = StatisticsEngine._to_array(values)
+        is_int = arr == np.floor(arr)
+        is_odd = arr.astype(np.int64) % 2 != 0
 
         return int(np.sum(is_int & is_odd))
 
@@ -681,7 +667,7 @@ class StatisticsEngine:
         if not values:
             return None
 
-        arr  = StatisticsEngine._to_array(values)
+        arr = StatisticsEngine._to_array(values)
         mean = np.mean(arr)
 
         return int(np.sum(arr > mean))
@@ -691,7 +677,7 @@ class StatisticsEngine:
         if not values:
             return None
 
-        arr  = StatisticsEngine._to_array(values)
+        arr = StatisticsEngine._to_array(values)
         mean = np.mean(arr)
 
         return int(np.sum(arr < mean))
@@ -701,7 +687,7 @@ class StatisticsEngine:
         if not values:
             return None
 
-        arr  = StatisticsEngine._to_array(values)
+        arr = StatisticsEngine._to_array(values)
         mean = np.mean(arr)
 
         return float(arr[np.argmin(np.abs(arr - mean))])
@@ -711,7 +697,7 @@ class StatisticsEngine:
         if not values:
             return None
 
-        arr  = StatisticsEngine._to_array(values)
+        arr = StatisticsEngine._to_array(values)
         mean = np.mean(arr)
 
         return float(arr[np.argmax(np.abs(arr - mean))])
@@ -775,10 +761,10 @@ class StatisticsEngine:
         if not values:
             return None
 
-        arr    = StatisticsEngine._to_array(values)
-        mean   = float(np.mean(arr))
+        arr = StatisticsEngine._to_array(values)
+        mean = float(np.mean(arr))
         median = float(np.median(arr))
-        std    = float(np.std(arr, ddof=1))
+        std = float(np.std(arr, ddof=1))
 
         if std == 0:
             return 0.0
@@ -795,8 +781,8 @@ class StatisticsEngine:
             return None
 
         arr = StatisticsEngine._to_array(values)
-        mn  = float(np.min(arr))
-        mx  = float(np.max(arr))
+        mn = float(np.min(arr))
+        mx = float(np.max(arr))
 
         if mx == mn:
             return None
@@ -809,8 +795,8 @@ class StatisticsEngine:
             return None
 
         arr = StatisticsEngine._to_array(values)
-        mn  = float(np.min(arr))
-        mx  = float(np.max(arr))
+        mn = float(np.min(arr))
+        mx = float(np.max(arr))
 
         if mx == mn:
             return None
@@ -838,7 +824,8 @@ class StatisticsEngine:
         if isinstance(mode_val, str):
             try:
                 import ast
-                modes      = ast.literal_eval(mode_val)
+
+                modes = ast.literal_eval(mode_val)
                 mode_count = sum(values.count(m) for m in modes)
             except Exception:
                 return None
@@ -865,7 +852,7 @@ class StatisticsEngine:
             return None
 
         mad_val = StatisticsEngine.mad(values)
-        r       = StatisticsEngine.range_value(values)
+        r = StatisticsEngine.range_value(values)
 
         if mad_val is None or r is None or r == 0:
             return None
@@ -875,7 +862,7 @@ class StatisticsEngine:
     # =========================
     # DYNAMIC STAT REGISTRY
     # =========================
-    
+
     # TODO: Add tooltip
     METRIC_STATS = {
         "Mean": mean.__func__,
@@ -897,12 +884,10 @@ class StatisticsEngine:
         "n": count.__func__,
         "95% CI": ci_95.__func__,
         "Mean +- Std.": mean_pm_std.__func__,
-
         # Count & Missing
         "Count Unique": count_unique.__func__,
         "Count Missing": count_missing.__func__,
         "Percentage Missing": percentage_missing.__func__,
-
         # Spread & Position
         "First Quartile Spread": first_quartile_spread.__func__,
         "Third Quartile Spread": third_quartile_spread.__func__,
@@ -911,7 +896,6 @@ class StatisticsEngine:
         "Quartile Deviation": quartile_deviation.__func__,
         "Central 50% Range": central_50_range.__func__,
         "Central 80% Range": central_80_range.__func__,
-
         # Frequency
         "Most Frequent Value Count": most_frequent_value_count.__func__,
         "Least Frequent Value": least_frequent_value.__func__,
@@ -919,40 +903,33 @@ class StatisticsEngine:
         "Relative Frequency Table": relative_frequency_table.__func__,
         "Cumulative Count": cumulative_count.__func__,
         "Cumulative Percentage": cumulative_percentage.__func__,
-
         # Percentiles
         "Percentile 10": percentile_10.__func__,
         "Percentile 90": percentile_90.__func__,
-
         # Outliers
         "Lower Outlier Boundary": lower_outlier_boundary.__func__,
         "Upper Outlier Boundary": upper_outlier_boundary.__func__,
         "Outlier Values": outlier_values.__func__,
         "Outlier Count": outlier_count.__func__,
-
         # Variability
         "Coefficient of Variation": coefficient_of_variation.__func__,
         "Mean Absolute Deviation": mean_absolute_deviation.__func__,
         "Trimmed Mean": trimmed_mean.__func__,
         "Spread Score": spread_score.__func__,
         "Range Percentage": range_percentage.__func__,
-
         # Histogram helpers
         "Interval Width": interval_width.__func__,
         "Bin Count": bin_count.__func__,
-
         # Data properties
         "Data Span": data_span.__func__,
         "Duplicate Count": duplicate_count.__func__,
         "Data Density": data_density.__func__,
-
         # Value sign counts
         "Positive Count": positive_count.__func__,
         "Negative Count": negative_count.__func__,
         "Zero Count": zero_count.__func__,
         "Even Count": even_count.__func__,
         "Odd Count": odd_count.__func__,
-
         # Mean comparisons
         "Above Mean Count": above_mean_count.__func__,
         "Below Mean Count": below_mean_count.__func__,
@@ -960,15 +937,12 @@ class StatisticsEngine:
         "Farthest from Mean": farthest_from_mean.__func__,
         "Lower Half Mean": lower_half_mean.__func__,
         "Upper Half Mean": upper_half_mean.__func__,
-
         # Balance & Symmetry
         "Data Balance": data_balance.__func__,
         "Symmetry Score": symmetry_score.__func__,
-
         # Normalization
         "Normalized Mean": normalized_mean.__func__,
         "Normalized STDV": normalized_stdv.__func__,
-
         # Distribution characteristics
         "Peak Density": peak_density.__func__,
         "Data Uniformity": data_uniformity.__func__,
@@ -977,9 +951,7 @@ class StatisticsEngine:
 
     @classmethod
     def compute_metric_stats(
-        cls,
-        values: list[float],
-        selected_stats: list[str]
+        cls, values: list[float], selected_stats: list[str]
     ) -> dict[str, Any]:
 
         results = {}
@@ -994,9 +966,7 @@ class StatisticsEngine:
 
     @classmethod
     def compute_ordinal_stats(
-        cls,
-        values: list,
-        selected_stats: list[str]
+        cls, values: list, selected_stats: list[str]
     ) -> dict[str, Any]:
 
         numeric_values = []
@@ -1011,26 +981,24 @@ class StatisticsEngine:
 
     @classmethod
     def compute_nominal_stats(
-        cls,
-        values: list,
-        selected_stats: list[str]
+        cls, values: list, selected_stats: list[str]
     ) -> dict[str, Any]:
 
         results = {}
 
         nominal_dispatch = {
-            "Mode":                     lambda v: cls.mode(v),
-            "n":                        lambda v: len(v),
-            "Count Unique":             lambda v: cls.count_unique(v),
-            "Count Missing":            lambda v: cls.count_missing(v),
-            "Percentage Missing":       lambda v: cls.percentage_missing(v),
-            "Most Frequent Value Count":lambda v: cls.most_frequent_value_count(v),
-            "Least Frequent Value":     lambda v: cls.least_frequent_value(v),
-            "Value Frequency Table":    lambda v: cls.value_frequency_table(v),
+            "Mode": lambda v: cls.mode(v),
+            "n": lambda v: len(v),
+            "Count Unique": lambda v: cls.count_unique(v),
+            "Count Missing": lambda v: cls.count_missing(v),
+            "Percentage Missing": lambda v: cls.percentage_missing(v),
+            "Most Frequent Value Count": lambda v: cls.most_frequent_value_count(v),
+            "Least Frequent Value": lambda v: cls.least_frequent_value(v),
+            "Value Frequency Table": lambda v: cls.value_frequency_table(v),
             "Relative Frequency Table": lambda v: cls.relative_frequency_table(v),
-            "Cumulative Count":         lambda v: cls.cumulative_count(v),
-            "Cumulative Percentage":    lambda v: cls.cumulative_percentage(v),
-            "Duplicate Count":          lambda v: cls.duplicate_count(v),
+            "Cumulative Count": lambda v: cls.cumulative_count(v),
+            "Cumulative Percentage": lambda v: cls.cumulative_percentage(v),
+            "Duplicate Count": lambda v: cls.duplicate_count(v),
         }
 
         for stat in selected_stats:

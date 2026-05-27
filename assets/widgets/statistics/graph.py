@@ -17,6 +17,7 @@ from textual.widget import Widget
 from .plot_engine.plot_callback import PlotCallback, PlotFallback, PlotType
 from .plot_engine.widgets.plot_container import PlotContainer
 
+
 # ----------------------------------------------------------------------
 # Helper: generate a synthetic normal distribution.
 # This function is used to provide default data for the histogram
@@ -50,8 +51,9 @@ def _generate_normal_distribution(
     rng = np.random.default_rng(seed)
     return rng.normal(loc=mean, scale=std, size=n).tolist()
 
+
 # Default dataset used by the widget when no external data is provided.
-SAMPLE_HISTOGRAM_DATA = _generate_normal_distribution(mean=50.0, std=10.0, n=200)
+
 
 # ----------------------------------------------------------------------
 # Histogram widget
@@ -106,6 +108,7 @@ class Histogram(Widget):
         self,
         data: list[float] | None = None,
         *,
+        plt: PlotCallback | None = None,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
@@ -123,20 +126,50 @@ class Histogram(Widget):
         """
         super().__init__(name=name, id=id, classes=classes)
         # Use provided data or fall back to the sample data.
-        self._data = data if data is not None else SAMPLE_HISTOGRAM_DATA
+        self.mean = 50
+        self.std = 10
+        self.n = 200
+        self._HISTOGRAM_DATA = _generate_normal_distribution(
+            mean=self.mean, std=self.std, n=self.n
+        )
+        self._data = data if data is not None else self._HISTOGRAM_DATA
+        self.bins = 20
 
         # Configure the PlotCallback with default settings.
-        self._plt = (
-            PlotCallback(fallback=PlotFallback.PLOTWIDGET)
-            .plot_type(PlotType.HISTOGRAM)
-            .y(self._data)
-            .title("Histogram")
-            .xlabel("Value")
-            .ylabel("Frequency")
-            .bins(10)
-            .show_mean(True)
-            .color("steelblue")
-        )
+        # When this is used, replace _plt.. This _plt right here is a "placeholder".
+        if plt is not None:
+            self._plt = plt
+            # Ensure the custom plot has the correct data attached if it wasn't already
+            self._plt.y(self._data)
+        else:
+            self._plt = (
+                PlotCallback(fallback=PlotFallback.PLOTWIDGET)
+                .plot_type(PlotType.HISTOGRAM)
+                .y(self._data)
+                .title("Histogram")
+                .xlabel("Value")
+                .ylabel("Frequency")
+                .bins(self.bins)
+                .show_mean(True)
+                .color("red")
+            )
+
+    @property
+    def plt(self) -> PlotCallback:
+        """Expose the PlotCallback instance to external consumers."""
+        return self._plt
+
+    @plt.setter
+    def plt(self, new_plt: PlotCallback) -> None:
+        """Allow external code to completely replace the PlotCallback instance."""
+        self._plt = new_plt
+        # If the widget has already been composed, update the container data too
+        try:
+            plot_container = self.query_one("#plot-container", PlotContainer)
+            # You might need to re-pass the new callback configuration to your container here
+            plot_container._rebuild()
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Layout composition
@@ -177,11 +210,13 @@ class Histogram(Widget):
                             id="show-dropdown",
                         )
                         # Bin size input box
-                        yield InputBox(label="Bin size", placeholder="type here...", id="bin-size")
+                        yield InputBox(
+                            label="Bin size", placeholder="type here...", id="bin-size"
+                        )
                         # Backend selector
                         yield RadioGroup(
                             label="_fallback",
-                            options=["Plotext", "Sixel (heavy)", "Matplotlib" ],
+                            options=["Plotext", "Sixel (heavy)", "Matplotlib"],
                             default="Plotext",
                             id="_fallback",
                         )
@@ -194,7 +229,7 @@ class Histogram(Widget):
                             id="info-bar",
                             classes="info-bar",
                         )
-                        yield PlotContainer(self._plt, id="plot-container")
+                        # yield PlotContainer(self._plt, id="plot-container")
 
     # ------------------------------------------------------------------
     # Event handlers
@@ -256,7 +291,7 @@ class Histogram(Widget):
         # Get bin size
         try:
             bin_input = self.query_one("#bin-size", InputBox)
-            bin_value = bin_input.value.strip() if hasattr(bin_input, 'value') else ""
+            bin_value = bin_input.value.strip() if hasattr(bin_input, "value") else ""
             bins = int(bin_value) if bin_value else 10
         except (ValueError, Exception):
             bins = 10
@@ -266,7 +301,9 @@ class Histogram(Widget):
         # Get show options
         try:
             show_dropdown = self.query_one("#show-dropdown", DropBox)
-            selected = show_dropdown.selected if hasattr(show_dropdown, 'selected') else []
+            selected = (
+                show_dropdown.selected if hasattr(show_dropdown, "selected") else []
+            )
 
             self._plt.show_mean("Mean" in selected)
             self._plt.show_median("Median" in selected)
