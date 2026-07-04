@@ -29,6 +29,7 @@ from textual.widgets import (
 from rich.text import Text
 
 # Widgets modules
+from assets.widgets.viewer.configUI import ConfigUI
 from assets.widgets.viewer.clipboard import Clipboard
 from assets.widgets.viewer.confirmation_box import ConfirmScreen
 from assets.widgets.viewer.message_box import MessageBox
@@ -149,6 +150,8 @@ Screen { background: $background; }
         Binding("q", "quit", "Quit"),
         Binding("w", "save", "Save"),
         Binding("r", "reload", "Reload"),
+        Binding("C", "open_config", "Go to config"),
+        Binding("r", "reload", "Reload"),
         Binding("escape", "deselect", "Deselect / Cancel"),
         # NAV (nvim-style hjkl)
         Binding("l", "next_cell", "Next Cell", show=False),
@@ -265,6 +268,17 @@ Screen { background: $background; }
         self.modified = True
         self._update_save_status()
         self._populate_table()
+
+    # Chapter actions: ConfigUI
+    def action_open_config(self) -> None:
+        def on_config_dismiss(should_reload: bool) -> None:
+            if should_reload:
+                self.notify("Reload due to config change", timeout=3)
+
+        self.push_screen(
+            ConfigUI("config.json", default_path="default.json"),
+            callback=on_config_dismiss,
+        )
 
     # Chapter actions: undo / redo
 

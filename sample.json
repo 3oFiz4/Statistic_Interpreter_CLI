@@ -1,0 +1,27 @@
+[
+  {
+    "date": "5/4/26",
+    "nominal": "25",
+    "description": "Initial deposit"
+  },
+  {
+    "date": "5/5/26",
+    "nominal": "50",
+    "description": "Second payment"
+  },
+  {
+    "date": "5/6/26",
+    "nominal": "100",
+    "description": "Third payment"
+  },
+  {
+    "date": "5/7/26",
+    "nominal": "75",
+    "description": "Fourth payment"
+  },
+  {
+    "date": "5/8/26",
+    "nominal": "200",
+    "description": "Final payment"
+  }
+]
