@@ -45,11 +45,23 @@ from assets.widgets.viewer.formatter import (
 )
 from formatter.view_format import BuildViewFormat
 
+
+with open("config.json", "r", encoding="utf-8") as config_file:
+    config = json.load(config_file)
+
 # > Configurable Variables
-MAX_UNDO_HISTORY = 50  # max number of undo states kept in memory
-MIN_COLUMN_WIDTH = 3  # min column width in characters
-MAX_COLUMN_WIDTH = 60  # max column width in characters
-DEFAULT_COL_WIDTH = 12  # width start for newly added columns
+MAX_UNDO_HISTORY = int(
+    config["MAX_UNDO_HISTORY:input"]
+)  # max number of undo states kept in memory
+MIN_COLUMN_WIDTH = int(
+    config["MIN_COLUMN_WIDTH:input"]
+)  # min column width in characters
+MAX_COLUMN_WIDTH = int(
+    config["MAX_COLUMN_WIDTH:input"]
+)  # max column width in characters
+DEFAULT_COL_WIDTH = int(
+    config["DEFAULT_COL_WIDTH:input"]
+)  # width start for newly added columns
 
 
 # > MAIN APP STARTS HERE
@@ -204,7 +216,11 @@ Screen { background: $background; }
         Binding("?", "find_replace", "Find & Replace"),
     ]
 
-    POLL_INTERVAL = 1.0  # the interval between checking the file if there is an external change. For example, say you are checking file main.json, the moment it changes, it is updated 1 sec (default) after.
+    POLL_INTERVAL = float(
+        config["FILE_CHANGE_POLL_INTERVAL"]
+    )  # the interval between checking the file if there is an external change. For example, say you are checking file main.json, the moment it changes, it is updated 1 sec (default) after.
+
+    theme = config["DEFAULT_THEME"]  # nothing means using crimson demon theme
 
     def __init__(self, json_file: str) -> None:
         super().__init__()
@@ -231,7 +247,7 @@ Screen { background: $background; }
         self._fmt_cfg = BuildViewFormat()  # ← add this one line
 
     def compose(self) -> ComposeResult:  # ui
-        yield Static("", id="title-bar")
+        yield Label(self.json_file.name)
         with Container(id="main-container"):
             yield DataTable(id="json-table", cursor_type="cell", zebra_stripes=True)
         with Horizontal(id="status-container"):
@@ -243,7 +259,8 @@ Screen { background: $background; }
         self.load_json()
         LoadTheme(self)  # apply the Crimson Demon theme, burrrnnnns
         self.set_interval(self.POLL_INTERVAL, self._poll_file_changes)
-        self.title = f"Viewer – {self.json_file.name}"
+        __config_title = str(config["APP_TITLE"])
+        self.title = __config_title.format(self.json_file.name)
 
     # HELPFER FUNC. Labelled as _
     def _push_undo(self) -> None:
