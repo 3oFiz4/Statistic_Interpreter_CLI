@@ -1,0 +1,63 @@
+{
+    "#General": {},
+    "darkMode": false,
+    "username:input": "user",
+    "language:list": {
+        "default": "English",
+        "list": [
+            "English",
+            "Spanish",
+            "French",
+            "German",
+            "Japanese"
+        ]
+    },
+    "autoSave": true,
+    "#Display": {},
+    "fullscreen": false,
+    "resolution:list": {
+        "default": "1920x1080",
+        "list": [
+            "1280x720",
+            "1920x1080",
+            "2560x1440",
+            "3840x2160"
+        ]
+    },
+    "fontSize:input": "12",
+    "#Advanced": {},
+    "vsync": true,
+    "antiAliasing:list": {
+        "default": "TAA",
+        "list": [
+            "None",
+            "FXAA",
+            "MSAA",
+            "TAA"
+        ]
+    },
+    "renderScale:input": "1.0",
+    "#Network": {},
+    "proxyEnabled": false,
+    "proxyAddress:input": "",
+    "proxyPort:input": "8080",
+    "timeout:list": {
+        "default": "30s",
+        "list": [
+            "10s",
+            "30s",
+            "60s",
+            "120s"
+        ]
+    },
+    "notifications": true,
+    "logLevel:list": {
+        "default": "INFO",
+        "list": [
+            "DEBUG",
+            "INFO",
+            "WARNING",
+            "ERROR"
+        ]
+    }
+}

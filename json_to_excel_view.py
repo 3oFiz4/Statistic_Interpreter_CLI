@@ -1,4 +1,5 @@
 # Required modules
+import sys
 import json
 import csv
 import os
@@ -38,20 +39,19 @@ from assets.themes.crimson_demon import LoadTheme
 from assets.widgets.viewer.formatter import (
     apply_rules,
     RuleContext,
-    FormatRule,          # only needed if rules added at runtime
+    FormatRule,  # only needed if rules added at runtime
     TableFormattingConfig,
 )
 from formatter.view_format import BuildViewFormat
 
-#> Configurable Variables
-MAX_UNDO_HISTORY = 50       # max number of undo states kept in memory
-MIN_COLUMN_WIDTH  = 3       # min column width in characters
-MAX_COLUMN_WIDTH  = 60      # max column width in characters
-DEFAULT_COL_WIDTH = 12      # width start for newly added columns
+# > Configurable Variables
+MAX_UNDO_HISTORY = 50  # max number of undo states kept in memory
+MIN_COLUMN_WIDTH = 3  # min column width in characters
+MAX_COLUMN_WIDTH = 60  # max column width in characters
+DEFAULT_COL_WIDTH = 12  # width start for newly added columns
 
 
-
-#> MAIN APP STARTS HERE
+# > MAIN APP STARTS HERE
 class JsonTableApp(App):
     """
     Keybind Pattern (remember it)
@@ -142,103 +142,92 @@ Screen { background: $background; }
     Footer > .footer--key { background:$primary 20%; color:$primary; }
     Footer > .footer--description { color:$success; }
     """
-    
-    #TODO: This is excel like keybind.. Thought of switching to nvim keybinds lately.
+
+    # TODO: This is excel like keybind.. Thought of switching to nvim keybinds lately.
     # if you dont like nvim idc :sob:, just get used to it bruhhh
     BINDINGS = [
-Binding("q",          "quit",              "Quit"),
-Binding("w",         "save",              "Save"),
-Binding("r",         "reload",            "Reload"),
-Binding("escape",     "deselect",          "Deselect / Cancel"),
-
-# NAV (nvim-style hjkl)
-Binding("l",          "next_cell",         "Next Cell",   show=False),
-Binding("h",          "prev_cell",         "Prev Cell",   show=False),
-Binding("0",        "goto_first_cell",   "First Cell",  show=False),
-Binding("G",    "goto_last_cell",    "Last Cell",   show=False),
-Binding("$",          "jump_right",        "Jump Right",  show=False),
-Binding("^",          "jump_left",         "Jump Left",   show=False),
-
-# EDIT
-Binding("enter",      "edit_cell",         "Edit Cell"),
-Binding("i",          "edit_cell",         "Edit",        show=False),
-Binding("d",          "clear_cell",        "Clear Cell"),
-Binding("u",          "undo",              "Undo"),
-Binding("ctrl+r",     "redo",              "Redo"),
-
-# CRUD Row
-Binding("a",          "add_row",           "Add Row"),
-# Binding("D",        "delete_row",        "Delete Row"),
-Binding("O",          "insert_row_above",  "Insert Above"),
-Binding("o",          "insert_row_below",  "Insert Below"),
-# Binding("Y",        "duplicate_row",     "Duplicate Row"),
-
-# CRUD Column
-Binding("ctrl+a",   "add_column",        "Add Column"),
-Binding("ctrl+d",   "delete_column",     "Delete Column"),
-Binding("ctrl+h",   "insert_col_left",   "Insert Col Left"),
-Binding("ctrl+l",   "insert_col_right",  "Insert Col Right"),
-
-# MOVE Row
-Binding("alt+k",    "move_row_up",       "Move Row Up"),
-Binding("alt+j",    "move_row_down",     "Move Row Down"),
-
-# YANK & PASTE
-Binding("y",          "copy_cell",         "Copy Cell"),
-Binding("Y",        "copy_row",          "Copy Row"),
-Binding("D",        "cut_row",           "Cut Row"),
-Binding("p",          "paste",             "Paste"),
-
-# SELECT
-Binding("V",        "select_all",        "Select All"),
-Binding("v",          "select_row",        "Select Row"),
-
-# HIDE & UNHIDE
-Binding(".",        "hide_row",          "Hide Row"),
-Binding(";",        "unhide_all_rows",   "Unhide All Rows"),
-Binding("/",        "hide_column",       "Hide Column"),
-Binding("'",        "unhide_all_columns","Unhide All Cols"),
-
-# RESIZE Column
-Binding(">",          "widen_column",      "Widen Col"),
-Binding("<",          "narrow_column",     "Narrow Col"),
-Binding("=",          "autofit_column",    "Auto-fit Col"),
-
-# SORT
-Binding("s",        "sort_asc",          "Sort ↑"),
-Binding("S",        "sort_desc",         "Sort ↓"),
-
-# FIND & REPLACE
-Binding("?",          "find_replace",      "Find & Replace"),
+        Binding("q", "quit", "Quit"),
+        Binding("w", "save", "Save"),
+        Binding("r", "reload", "Reload"),
+        Binding("escape", "deselect", "Deselect / Cancel"),
+        # NAV (nvim-style hjkl)
+        Binding("l", "next_cell", "Next Cell", show=False),
+        Binding("h", "prev_cell", "Prev Cell", show=False),
+        Binding("0", "goto_first_cell", "First Cell", show=False),
+        Binding("G", "goto_last_cell", "Last Cell", show=False),
+        Binding("$", "jump_right", "Jump Right", show=False),
+        Binding("^", "jump_left", "Jump Left", show=False),
+        # EDIT
+        Binding("enter", "edit_cell", "Edit Cell"),
+        Binding("i", "edit_cell", "Edit", show=False),
+        Binding("d", "clear_cell", "Clear Cell"),
+        Binding("u", "undo", "Undo"),
+        Binding("ctrl+r", "redo", "Redo"),
+        # CRUD Row
+        Binding("a", "add_row", "Add Row"),
+        # Binding("D",        "delete_row",        "Delete Row"),
+        Binding("O", "insert_row_above", "Insert Above"),
+        Binding("o", "insert_row_below", "Insert Below"),
+        # Binding("Y",        "duplicate_row",     "Duplicate Row"),
+        # CRUD Column
+        Binding("ctrl+a", "add_column", "Add Column"),
+        Binding("ctrl+d", "delete_column", "Delete Column"),
+        Binding("ctrl+h", "insert_col_left", "Insert Col Left"),
+        Binding("ctrl+l", "insert_col_right", "Insert Col Right"),
+        # MOVE Row
+        Binding("alt+k", "move_row_up", "Move Row Up"),
+        Binding("alt+j", "move_row_down", "Move Row Down"),
+        # YANK & PASTE
+        Binding("y", "copy_cell", "Copy Cell"),
+        Binding("Y", "copy_row", "Copy Row"),
+        Binding("D", "cut_row", "Cut Row"),
+        Binding("p", "paste", "Paste"),
+        # SELECT
+        Binding("V", "select_all", "Select All"),
+        Binding("v", "select_row", "Select Row"),
+        # HIDE & UNHIDE
+        Binding(".", "hide_row", "Hide Row"),
+        Binding(";", "unhide_all_rows", "Unhide All Rows"),
+        Binding("/", "hide_column", "Hide Column"),
+        Binding("'", "unhide_all_columns", "Unhide All Cols"),
+        # RESIZE Column
+        Binding(">", "widen_column", "Widen Col"),
+        Binding("<", "narrow_column", "Narrow Col"),
+        Binding("=", "autofit_column", "Auto-fit Col"),
+        # SORT
+        Binding("s", "sort_asc", "Sort ↑"),
+        Binding("S", "sort_desc", "Sort ↓"),
+        # FIND & REPLACE
+        Binding("?", "find_replace", "Find & Replace"),
     ]
 
-    POLL_INTERVAL = 1.0   # the interval between checking the file if there is an external change. For example, say you are checking file main.json, the moment it changes, it is updated 1 sec (default) after.
-    
+    POLL_INTERVAL = 1.0  # the interval between checking the file if there is an external change. For example, say you are checking file main.json, the moment it changes, it is updated 1 sec (default) after.
+
     def __init__(self, json_file: str) -> None:
         super().__init__()
         self.json_file = Path(json_file)
 
         #  core
-        self.data:    List[Dict[str, Any]] = []
-        self.columns: List[str]            = []   # first entry is always "entry"
+        self.data: List[Dict[str, Any]] = []
+        self.columns: List[str] = []  # first entry is always "entry"
         self.modified = False
 
         #  column metadata
-        self.column_widths: Dict[str, int]  = {}  # col_name -> char width
-        self.hidden_columns: Set[str]        = set()
-        self.hidden_rows:    Set[int]        = set()  # zero-based data indices
+        self.column_widths: Dict[str, int] = {}  # col_name -> char width
+        self.hidden_columns: Set[str] = set()
+        self.hidden_rows: Set[int] = set()  # zero-based data indices
 
         #  clipboard & undo
-        self.board_clip:   Clipboard       = Clipboard()
-        self._undo_stack: deque           = deque(maxlen=MAX_UNDO_HISTORY)
-        self._redo_stack: deque           = deque(maxlen=MAX_UNDO_HISTORY)
+        self.board_clip: Clipboard = Clipboard()
+        self._undo_stack: deque = deque(maxlen=MAX_UNDO_HISTORY)
+        self._redo_stack: deque = deque(maxlen=MAX_UNDO_HISTORY)
 
         #  misc
         self.custom_formats: List[Dict[str, Any]] = []
-        self._last_mtime:    float | None          = None
-        self._fmt_cfg = BuildViewFormat()   # ← add this one line
+        self._last_mtime: float | None = None
+        self._fmt_cfg = BuildViewFormat()  # ← add this one line
 
-    def compose(self) -> ComposeResult: # ui
+    def compose(self) -> ComposeResult:  # ui
         yield Static("", id="title-bar")
         with Container(id="main-container"):
             yield DataTable(id="json-table", cursor_type="cell", zebra_stripes=True)
@@ -257,23 +246,23 @@ Binding("?",          "find_replace",      "Find & Replace"),
     def _push_undo(self) -> None:
         """Remember the current data, and then hidden sets into the undo stack"""
         snapshot = {
-            "data":           copy.deepcopy(self.data),
-            "columns":        list(self.columns),
-            "column_widths":  dict(self.column_widths),
+            "data": copy.deepcopy(self.data),
+            "columns": list(self.columns),
+            "column_widths": dict(self.column_widths),
             "hidden_columns": set(self.hidden_columns),
-            "hidden_rows":    set(self.hidden_rows),
+            "hidden_rows": set(self.hidden_rows),
         }
         self._undo_stack.append(snapshot)
-        self._redo_stack.clear()   # new action invalidates redo history
+        self._redo_stack.clear()  # new action invalidates redo history
 
     def _restore_snapshot(self, snap: dict) -> None:
         """Append snapshot dict to current state and then refresh the table"""
-        self.data           = copy.deepcopy(snap["data"])
-        self.columns        = list(snap["columns"])
-        self.column_widths  = dict(snap["column_widths"])
+        self.data = copy.deepcopy(snap["data"])
+        self.columns = list(snap["columns"])
+        self.column_widths = dict(snap["column_widths"])
         self.hidden_columns = set(snap["hidden_columns"])
-        self.hidden_rows    = set(snap["hidden_rows"])
-        self.modified       = True
+        self.hidden_rows = set(snap["hidden_rows"])
+        self.modified = True
         self._update_save_status()
         self._populate_table()
 
@@ -284,13 +273,15 @@ Binding("?",          "find_replace",      "Find & Replace"),
             self._show_message("Undo", "Nothing to undo", "info")
             return
         # Remember current state to redo stack
-        self._redo_stack.append({
-            "data":           copy.deepcopy(self.data),
-            "columns":        list(self.columns),
-            "column_widths":  dict(self.column_widths),
-            "hidden_columns": set(self.hidden_columns),
-            "hidden_rows":    set(self.hidden_rows),
-        })
+        self._redo_stack.append(
+            {
+                "data": copy.deepcopy(self.data),
+                "columns": list(self.columns),
+                "column_widths": dict(self.column_widths),
+                "hidden_columns": set(self.hidden_columns),
+                "hidden_rows": set(self.hidden_rows),
+            }
+        )
         self._restore_snapshot(self._undo_stack.pop())
         self._update_status("Undo")
 
@@ -298,13 +289,15 @@ Binding("?",          "find_replace",      "Find & Replace"),
         if not self._redo_stack:
             self._show_message("Redo", "Nothing to redo", "info")
             return
-        self._undo_stack.append({
-            "data":           copy.deepcopy(self.data),
-            "columns":        list(self.columns),
-            "column_widths":  dict(self.column_widths),
-            "hidden_columns": set(self.hidden_columns),
-            "hidden_rows":    set(self.hidden_rows),
-        })
+        self._undo_stack.append(
+            {
+                "data": copy.deepcopy(self.data),
+                "columns": list(self.columns),
+                "column_widths": dict(self.column_widths),
+                "hidden_columns": set(self.hidden_columns),
+                "hidden_rows": set(self.hidden_rows),
+            }
+        )
         self._restore_snapshot(self._redo_stack.pop())
         self._update_status("Redo")
 
@@ -316,7 +309,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
         row, col = table.cursor_coordinate.row, table.cursor_coordinate.column
         col += 1
         if col >= len(self.columns):
-            col  = 0
+            col = 0
             row += 1
         if row < table.row_count:
             table.move_cursor(row=row, column=col)
@@ -327,7 +320,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
         row, col = table.cursor_coordinate.row, table.cursor_coordinate.column
         col -= 1
         if col < 0:
-            col  = len(self.columns) - 1
+            col = len(self.columns) - 1
             row -= 1
         if row >= 0:
             table.move_cursor(row=row, column=col)
@@ -379,8 +372,10 @@ Binding("?",          "find_replace",      "Find & Replace"),
             return
 
         current_value = str(table.get_cell_at(table.cursor_coordinate))
-        column_name   = self.columns[col_idx] if col_idx < len(self.columns) else f"Col{col_idx}"
-        coord         = table.cursor_coordinate   # capture before async
+        column_name = (
+            self.columns[col_idx] if col_idx < len(self.columns) else f"Col{col_idx}"
+        )
+        coord = table.cursor_coordinate  # capture before async
 
         def on_edit_complete(new_value: Optional[str]) -> None:
             if new_value is None or new_value == current_value:
@@ -401,7 +396,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
             return
         col_idx = table.cursor_coordinate.column
         if col_idx == 0:
-            return   # protect the index column
+            return  # protect the index column
         row_idx = table.cursor_coordinate.row
         self._push_undo()
         col_name = self.columns[col_idx]
@@ -424,7 +419,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_insert_row_above(self) -> None:
         """Insert a blank row above the current cursor row"""
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         row_idx = table.cursor_coordinate.row if table.cursor_coordinate else 0
         self._push_undo()
         self.data.insert(row_idx, {col: "" for col in self.columns[1:]})
@@ -433,8 +428,12 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_insert_row_below(self) -> None:
         """Insert a blank row below the current cursor row"""
-        table   = self.query_one("#json-table", DataTable)
-        row_idx = (table.cursor_coordinate.row + 1) if table.cursor_coordinate else len(self.data)
+        table = self.query_one("#json-table", DataTable)
+        row_idx = (
+            (table.cursor_coordinate.row + 1)
+            if table.cursor_coordinate
+            else len(self.data)
+        )
         self._push_undo()
         self.data.insert(row_idx, {col: "" for col in self.columns[1:]})
         self._finish_structural_change(f"Inserted row at {row_idx + 1}")
@@ -442,7 +441,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_delete_row(self) -> None:
         """Delete the currently highlighted row (with confirmation)"""
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         row_idx = table.cursor_coordinate.row if table.cursor_coordinate else None
         if row_idx is None or row_idx >= len(self.data):
             self._show_message("Warning", "No row selected", "warning")
@@ -460,11 +459,13 @@ Binding("?",          "find_replace",      "Find & Replace"),
                 del self.data[row_idx]
                 self._finish_structural_change(f"Deleted row {row_idx + 1}")
 
-        self.push_screen(ConfirmScreen("Delete Row", f"Delete row {row_idx + 1}?"), on_confirm)
+        self.push_screen(
+            ConfirmScreen("Delete Row", f"Delete row {row_idx + 1}?"), on_confirm
+        )
 
     def action_duplicate_row(self) -> None:
         """Ctrl+D -> insert a copy of the current row directly below it"""
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         row_idx = table.cursor_coordinate.row if table.cursor_coordinate else None
         if row_idx is None or row_idx >= len(self.data):
             return
@@ -478,23 +479,29 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_move_row_up(self) -> None:
         """Alt+Up -> swap the current row with the one above it"""
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         row_idx = table.cursor_coordinate.row if table.cursor_coordinate else 0
         if row_idx <= 0:
             return
         self._push_undo()
-        self.data[row_idx], self.data[row_idx - 1] = self.data[row_idx - 1], self.data[row_idx]
+        self.data[row_idx], self.data[row_idx - 1] = (
+            self.data[row_idx - 1],
+            self.data[row_idx],
+        )
         self._finish_structural_change(f"Moved row {row_idx + 1} up")
         self.query_one("#json-table", DataTable).move_cursor(row=row_idx - 1, column=1)
 
     def action_move_row_down(self) -> None:
         """Alt+Down -> swap the current row with the one below it"""
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         row_idx = table.cursor_coordinate.row if table.cursor_coordinate else 0
         if row_idx >= len(self.data) - 1:
             return
         self._push_undo()
-        self.data[row_idx], self.data[row_idx + 1] = self.data[row_idx + 1], self.data[row_idx]
+        self.data[row_idx], self.data[row_idx + 1] = (
+            self.data[row_idx + 1],
+            self.data[row_idx],
+        )
         self._finish_structural_change(f"Moved row {row_idx + 1} down")
         self.query_one("#json-table", DataTable).move_cursor(row=row_idx + 1, column=1)
 
@@ -502,6 +509,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_add_column(self) -> None:
         """Alt+A -> prompt for a name and append a new column"""
+
         def on_name(name: Optional[str]) -> None:
             if not name:
                 return
@@ -519,7 +527,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_delete_column(self) -> None:
         """Alt+D -> delete the currently focused column (cannot delete 'entry')"""
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         col_idx = table.cursor_coordinate.column if table.cursor_coordinate else 0
         if col_idx == 0:
             self._show_message("Warning", "Cannot delete index column", "warning")
@@ -536,19 +544,25 @@ Binding("?",          "find_replace",      "Find & Replace"),
                     row.pop(col_name, None)
                 self._finish_structural_change(f"Deleted column '{col_name}'")
 
-        self.push_screen(ConfirmScreen("Delete Column", f"Delete column '{col_name}'?"), on_confirm)
+        self.push_screen(
+            ConfirmScreen("Delete Column", f"Delete column '{col_name}'?"), on_confirm
+        )
 
     def action_insert_col_left(self) -> None:
         """Alt+I -> insert a new column to the left of the current column"""
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         col_idx = table.cursor_coordinate.column if table.cursor_coordinate else 1
-        col_idx = max(col_idx, 1)   # never insert before "entry"
+        col_idx = max(col_idx, 1)  # never insert before "entry"
         self._insert_column_at(col_idx)
 
     def action_insert_col_right(self) -> None:
         """Alt+Shift+I -> insert a new column to the right of the current column"""
-        table   = self.query_one("#json-table", DataTable)
-        col_idx = (table.cursor_coordinate.column + 1) if table.cursor_coordinate else len(self.columns)
+        table = self.query_one("#json-table", DataTable)
+        col_idx = (
+            (table.cursor_coordinate.column + 1)
+            if table.cursor_coordinate
+            else len(self.columns)
+        )
         col_idx = max(col_idx, 1)
         self._insert_column_at(col_idx)
 
@@ -582,7 +596,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_copy_row(self) -> None:
         """Ctrl+Shift+C -> copy the entire current row to the board_clip"""
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         row_idx = table.cursor_coordinate.row if table.cursor_coordinate else None
         if row_idx is None or row_idx >= len(self.data):
             return
@@ -592,7 +606,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_cut_row(self) -> None:
         """Ctrl+X -> cut the current row (will be removed on paste)"""
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         row_idx = table.cursor_coordinate.row if table.cursor_coordinate else None
         if row_idx is None or row_idx >= len(self.data):
             return
@@ -602,17 +616,21 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_paste(self) -> None:
         """Ctrl+V -> paste board_clip contents at the current position"""
-        table   = self.query_one("#json-table", DataTable)
-        row_idx = table.cursor_coordinate.row if table.cursor_coordinate else len(self.data)
+        table = self.query_one("#json-table", DataTable)
+        row_idx = (
+            table.cursor_coordinate.row if table.cursor_coordinate else len(self.data)
+        )
         col_idx = table.cursor_coordinate.column if table.cursor_coordinate else 1
 
         if self.board_clip.has_cell:
             # ── paste a single cell value ──
             if col_idx == 0:
-                self._show_message("Warning", "Cannot paste into index column", "warning")
+                self._show_message(
+                    "Warning", "Cannot paste into index column", "warning"
+                )
                 return
             self._push_undo()
-            col_name  = self.columns[col_idx]
+            col_name = self.columns[col_idx]
             new_value = self.board_clip.cell_value or ""
             table.update_cell_at(table.cursor_coordinate, new_value)
             self.data[row_idx][col_name] = new_value
@@ -633,7 +651,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
                 else:
                     insert_at = row_idx
                 self.data.insert(insert_at, new_row)
-                self.board_clip.clear()   # cut-paste is a one-shot operation
+                self.board_clip.clear()  # cut-paste is a one-shot operation
             else:
                 # Plain copy-paste: insert below current row
                 self.data.insert(row_idx + 1, new_row)
@@ -664,7 +682,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_hide_row(self) -> None:
         """Ctrl+H -> hide the current row from view"""
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         row_idx = table.cursor_coordinate.row if table.cursor_coordinate else None
         if row_idx is None:
             return
@@ -684,7 +702,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_hide_column(self) -> None:
         """Alt+H -> hide the currently focused column"""
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         col_idx = table.cursor_coordinate.column if table.cursor_coordinate else 0
         if col_idx == 0:
             self._show_message("Warning", "Cannot hide index column", "warning")
@@ -714,7 +732,9 @@ Binding("?",          "find_replace",      "Find & Replace"),
         current = self.column_widths.get(col_name, DEFAULT_COL_WIDTH)
         self.column_widths[col_name] = min(current + 4, MAX_COLUMN_WIDTH)
         self._populate_table()
-        self._update_status(f"Column '{col_name}' width -> {self.column_widths[col_name]}")
+        self._update_status(
+            f"Column '{col_name}' width -> {self.column_widths[col_name]}"
+        )
 
     def action_narrow_column(self) -> None:
         """F3 -> decrease the current column's display width"""
@@ -724,7 +744,9 @@ Binding("?",          "find_replace",      "Find & Replace"),
         current = self.column_widths.get(col_name, DEFAULT_COL_WIDTH)
         self.column_widths[col_name] = max(current - 4, MIN_COLUMN_WIDTH)
         self._populate_table()
-        self._update_status(f"Column '{col_name}' width -> {self.column_widths[col_name]}")
+        self._update_status(
+            f"Column '{col_name}' width -> {self.column_widths[col_name]}"
+        )
 
     def action_autofit_column(self) -> None:
         """Ctrl+Shift+F -> auto-fit column width to the longest value in that column"""
@@ -742,7 +764,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
         self._update_status(f"Auto-fit '{col_name}' -> {new_width}")
 
     def _current_col_name(self) -> Optional[str]:
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         col_idx = table.cursor_coordinate.column if table.cursor_coordinate else None
         if col_idx is None or col_idx >= len(self.columns):
             return None
@@ -759,7 +781,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
         self._sort_by_column(reverse=True)
 
     def _sort_by_column(self, reverse: bool) -> None:
-        table   = self.query_one("#json-table", DataTable)
+        table = self.query_one("#json-table", DataTable)
         col_idx = table.cursor_coordinate.column if table.cursor_coordinate else 1
         if col_idx == 0:
             self._show_message("Warning", "Cannot sort by index column", "warning")
@@ -783,6 +805,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_find_replace(self) -> None:
         """Ctrl+F -> open the find & replace dialog"""
+
         def on_result(result: Optional[Tuple[str, str]]) -> None:
             if result is None:
                 return
@@ -828,12 +851,16 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_reload(self) -> None:
         if self.modified:
+
             def on_confirm(confirmed: bool) -> None:
                 if confirmed:
                     self.modified = False
                     self._update_save_status()
                     self.load_json()
-            self.push_screen(ConfirmScreen("Reload File", "Discard changes?"), on_confirm)
+
+            self.push_screen(
+                ConfirmScreen("Reload File", "Discard changes?"), on_confirm
+            )
         else:
             self.load_json()
 
@@ -842,9 +869,11 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
     def action_quit(self) -> None:
         if self.modified:
+
             def on_confirm(confirmed: bool) -> None:
                 if confirmed:
                     self.exit()
+
             self.push_screen(ConfirmScreen("Quit", "Exit without saving?"), on_confirm)
         else:
             self.exit()
@@ -898,9 +927,9 @@ Binding("?",          "find_replace",      "Find & Replace"),
             self._reload_file()
 
     def _fix_json(self, content: str) -> str:
-        content = re.sub(r',\s*]', ']', content)
-        content = re.sub(r',\s*}', '}', content)
-        content = re.sub(r'(\{|,)\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', content)
+        content = re.sub(r",\s*]", "]", content)
+        content = re.sub(r",\s*}", "}", content)
+        content = re.sub(r"(\{|,)\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:", r'\1"\2":', content)
         return content
 
     # ================================================================== table population
@@ -927,21 +956,18 @@ Binding("?",          "find_replace",      "Find & Replace"),
                             self.columns.append(key)
 
         # ── Merge hidden columns: your app state + config ────────────────────────
-        cfg_hidden   = {k for k, v in self._fmt_cfg.columns.items() if v.hidden}
-        all_hidden   = self.hidden_columns | cfg_hidden
+        cfg_hidden = {k for k, v in self._fmt_cfg.columns.items() if v.hidden}
+        all_hidden = self.hidden_columns | cfg_hidden
 
-        visible_cols = [
-            c for c in self.columns
-            if c not in all_hidden or c == "entry"
-        ]
+        visible_cols = [c for c in self.columns if c not in all_hidden or c == "entry"]
 
         # ── Add columns (unchanged logic, now also reads config width/label) ─────
         for col in visible_cols:
             if col in all_hidden:
                 continue
             col_cfg = self._fmt_cfg.columns.get(col)
-            label   = col_cfg.label if col_cfg and col_cfg.label else col.upper()
-            width   = self.column_widths.get(col) or (col_cfg.width if col_cfg else None)
+            label = col_cfg.label if col_cfg and col_cfg.label else col.upper()
+            width = self.column_widths.get(col) or (col_cfg.width if col_cfg else None)
             if width:
                 table.add_column(label, key=col, width=width)
             else:
@@ -968,25 +994,32 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
             # Zebra striping
             stripe = (
-                self._fmt_cfg.stripe_even if display_idx % 2 == 0 and self._fmt_cfg.stripe_even else
-                self._fmt_cfg.stripe_odd  if display_idx % 2 != 0 and self._fmt_cfg.stripe_odd  else
-                ""
+                self._fmt_cfg.stripe_even
+                if display_idx % 2 == 0 and self._fmt_cfg.stripe_even
+                else self._fmt_cfg.stripe_odd
+                if display_idx % 2 != 0 and self._fmt_cfg.stripe_odd
+                else ""
             )
 
             row_data = [Text(str(display_idx), style=f"#888888 {stripe}".strip())]
 
             if isinstance(item, dict):
-                for col in visible_cols[1:]:    # skip "entry"
-                    raw   = item.get(col, "")
+                for col in visible_cols[1:]:  # skip "entry"
+                    raw = item.get(col, "")
                     start = str(raw) if raw is not None else ""
 
                     # Always-on column default_fmt (e.g. DIV always cyan)
                     col_cfg = self._fmt_cfg.columns.get(col)
                     if col_cfg and col_cfg.default_fmt:
                         seed_ctx = RuleContext(
-                            row=row_dict, col=col, cell=raw, display=start,
-                            idx=idx, display_idx=display_idx,
-                            all_data=self.data, col_keys=visible_cols,
+                            row=row_dict,
+                            col=col,
+                            cell=raw,
+                            display=start,
+                            idx=idx,
+                            display_idx=display_idx,
+                            all_data=self.data,
+                            col_keys=visible_cols,
                         )
                         try:
                             start = col_cfg.default_fmt(seed_ctx)
@@ -995,18 +1028,20 @@ Binding("?",          "find_replace",      "Find & Replace"),
 
                     # ── Run the rule engine ──────────────────────────────────────
                     final = apply_rules(
-                        rules       = sorted_rules,
-                        row         = row_dict,
-                        col         = col,
-                        cell        = raw,
-                        idx         = idx,
-                        display_idx = display_idx,
-                        all_data    = self.data,
-                        col_keys    = visible_cols,
+                        rules=sorted_rules,
+                        row=row_dict,
+                        col=col,
+                        cell=raw,
+                        idx=idx,
+                        display_idx=display_idx,
+                        all_data=self.data,
+                        col_keys=visible_cols,
                     )
 
                     # Use rule output when it differs from the raw value
-                    display_str = final if final != str(raw if raw is not None else "") else start
+                    display_str = (
+                        final if final != str(raw if raw is not None else "") else start
+                    )
 
                     # Attach zebra stripe only if no explicit background was set by a rule
                     if stripe and "on " not in display_str:
@@ -1020,7 +1055,7 @@ Binding("?",          "find_replace",      "Find & Replace"),
             table.add_row(*row_data, key=str(display_idx))
 
         table.focus()
-        table.refresh()   # ← redraws the widget after programmatic clear+fill
+        table.refresh()  # ← redraws the widget after programmatic clear+fill
         self.refresh()
 
     # ================================================================== helpers
@@ -1052,15 +1087,16 @@ Binding("?",          "find_replace",      "Find & Replace"),
         try:
             table = self.query_one("#json-table", DataTable)
             if table.cursor_coordinate:
-                row      = table.cursor_coordinate.row + 1
-                col      = table.cursor_coordinate.column + 1
+                row = table.cursor_coordinate.row + 1
+                col = table.cursor_coordinate.column + 1
                 col_name = (
                     self.columns[table.cursor_coordinate.column]
-                    if table.cursor_coordinate.column < len(self.columns) else ""
+                    if table.cursor_coordinate.column < len(self.columns)
+                    else ""
                 )
                 hidden_r = len(self.hidden_rows)
                 hidden_c = len(self.hidden_columns)
-                extras   = []
+                extras = []
                 if hidden_r:
                     extras.append(f"{hidden_r} row(s) hidden")
                 if hidden_c:
@@ -1079,12 +1115,13 @@ Binding("?",          "find_replace",      "Find & Replace"),
 # Entry point helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def create_sample_json(filename: str) -> None:
     sample_data = [
-        {"date": "5/4/26", "nominal": "25",  "description": "Initial deposit"},
-        {"date": "5/5/26", "nominal": "50",  "description": "Second payment"},
+        {"date": "5/4/26", "nominal": "25", "description": "Initial deposit"},
+        {"date": "5/5/26", "nominal": "50", "description": "Second payment"},
         {"date": "5/6/26", "nominal": "100", "description": "Third payment"},
-        {"date": "5/7/26", "nominal": "75",  "description": "Fourth payment"},
+        {"date": "5/7/26", "nominal": "75", "description": "Fourth payment"},
         {"date": "5/8/26", "nominal": "200", "description": "Final payment"},
     ]
     with open(filename, "w", encoding="utf-8") as f:
@@ -1093,7 +1130,6 @@ def create_sample_json(filename: str) -> None:
 
 
 if __name__ == "__main__":
-    import sys
     file = sys.argv[1] if len(sys.argv) > 1 else "sample.json"
     if not Path(file).exists():
         create_sample_json(file)
