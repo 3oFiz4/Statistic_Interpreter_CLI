@@ -5,6 +5,7 @@ import csv
 import os
 import re
 import copy
+import subprocess as process
 from pathlib import Path
 from datetime import datetime
 from collections import deque
@@ -26,9 +27,11 @@ from textual.widgets import (
     Static,
     Switch,
 )
+from textual import events
 from rich.text import Text
 
 # Widgets modules
+from assets.widgets.utils.sequence import SequenceBinding
 from assets.widgets.viewer.configUI import ConfigUI
 from assets.widgets.viewer.clipboard import Clipboard
 from assets.widgets.viewer.confirmation_box import ConfirmScreen
@@ -65,7 +68,7 @@ DEFAULT_COL_WIDTH = int(
 
 
 # > MAIN APP STARTS HERE
-class JsonTableApp(App):
+class JsonTableApp(SequenceBinding, App):
     """
     Keybind Pattern (remember it)
     ------------------
@@ -154,15 +157,59 @@ Screen { background: $background; }
     Footer { background:$background; }
     Footer > .footer--key { background:$primary 20%; color:$primary; }
     Footer > .footer--description { color:$success; }
+
+
+    /* FOR GIT COMMANDS */
+    #bottom-bar {
+        layer: overlay;
+        dock: bottom;
+        height: auto;
+        width: 100%;
+        padding: 0 1 1 1;
+    }
+
+    #status-indicator {
+        background: black;
+        border: solid $primary;
+        padding: 0 1;
+        width: auto;
+        height: auto;
+        display: none;
+    }
+
+    .spacer {
+        width: 1fr;
+    }
+
+    #output-panel {
+        background: black;
+        border: solid $primary;
+        padding: 1;
+        width: auto;
+        min-width: 30;
+        max-width: 60%;
+        height: auto;
+        max-height: 15;
+        overflow-y: auto;
+        display: none;
+    }
     """
 
-    # TODO: This is excel like keybind.. Thought of switching to nvim keybinds lately.
-    # if you dont like nvim idc :sob:, just get used to it bruhhh
+    # using sequenceBinding.
+    SEQUENCES = [
+        ("gI", "git_init", "Git Init"),
+        ("gS", "git_status", "Git Status"),
+        ("gA", "git_add", "Git Add"),
+        ("gC", "git_commit", "Git Commit"),
+        ("gP", "git_push", "Git Push"),
+    ]
+
+    # TODO: Add option to change keybind and improve keybind to support multi-keys.
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("w", "save", "Save"),
         Binding("r", "reload", "Reload"),
-        Binding("C", "open_config", "Go to config"),
+        Binding(":", "open_config", "Go to config"),
         Binding("r", "reload", "Reload"),
         Binding("escape", "deselect", "Deselect / Cancel"),
         # NAV (nvim-style hjkl)
@@ -201,19 +248,26 @@ Screen { background: $background; }
         Binding("V", "select_all", "Select All"),
         Binding("v", "select_row", "Select Row"),
         # HIDE & UNHIDE
-        Binding(".", "hide_row", "Hide Row"),
-        Binding(";", "unhide_all_rows", "Unhide All Rows"),
-        Binding("/", "hide_column", "Hide Column"),
-        Binding("'", "unhide_all_columns", "Unhide All Cols"),
+        Binding("z", "hide_row", "Hide Row"),
+        Binding("Z", "unhide_all_rows", "Unhide All Rows"),
+        Binding("x", "hide_column", "Hide Column"),
+        Binding("X", "unhide_all_columns", "Unhide All Cols"),
         # RESIZE Column
         Binding(">", "widen_column", "Widen Col"),
         Binding("<", "narrow_column", "Narrow Col"),
         Binding("=", "autofit_column", "Auto-fit Col"),
         # SORT
-        Binding("s", "sort_asc", "Sort ↑"),
-        Binding("S", "sort_desc", "Sort ↓"),
+        Binding("l", "sort_asc", "Sort ↑"),
+        Binding(".", "sort_desc", "Sort ↓"),
         # FIND & REPLACE
         Binding("?", "find_replace", "Find & Replace"),
+        # GIT (__placeholder__, because they aint running an action function)
+        # this ONLY assumes you already git init some stuff, and you got your 'remote-origin' set!
+        Binding("g+i", "__placeholder__-1", "git init"),
+        Binding("g+s", "__placeholder__0", "git status"),
+        Binding("g+a", "__placeholder__1", "git add ."),
+        Binding("g+c", "__placeholder__2", "git commit -m ''"),
+        Binding("g+p", "__placeholder__3", "git push origin main"),
     ]
 
     POLL_INTERVAL = float(
@@ -247,6 +301,9 @@ Screen { background: $background; }
         self._last_mtime: float | None = None
         self._fmt_cfg = BuildViewFormat()  # ← add this one line
 
+        # git
+        self._hide_timer = None
+
     def compose(self) -> ComposeResult:  # ui
         yield Label(self.json_file.name)
         with Container(id="main-container"):
@@ -255,6 +312,61 @@ Screen { background: $background; }
             yield Static("Ready", id="status-message")
             yield Static("● Saved", id="save-status", classes="saved")
         yield Footer()
+
+    # ----------------------------------- STARTS OF GITHUB SECTIONS ------
+    def action_git_init(self) -> None:
+        """gs: Git status."""
+        self._run_command("git init")
+
+    def action_git_status(self) -> None:
+        """gs: Git status."""
+        self._run_command("git status")
+
+    def action_git_add(self) -> None:
+        """ga: Git add all."""
+        self._run_command("git add .")
+
+    def action_git_commit(self) -> None:
+        """gc: Git commit."""
+        self._run_command("git commit -m 'add expense'")
+
+    def action_git_push(self) -> None:
+        """gp: Git push."""
+        self._run_command("git push")
+
+    def _run_command(self, command: str) -> None:
+        """Run shell command and display output."""
+        if self._hide_timer:
+            self._hide_timer.stop()
+
+        # Show status
+        status = self.query_one("#status-indicator", Static)
+        status.update(f"⚡ {command}")
+        status.styles.display = "block"
+
+        # Run command
+        try:
+            result = subprocess.run(
+                command, shell=True, capture_output=True, text=True, timeout=30
+            )
+            output = result.stdout or result.stderr or "✓ Done"
+        except Exception as e:
+            output = f"✗ {e}"
+
+        # Show output
+        panel = self.query_one("#output-panel", Static)
+        panel.update(output.strip())
+        panel.styles.display = "block"
+
+        # Auto-hide after 5s
+        self._hide_timer = self.set_timer(5.0, self._hide_panels)
+
+    def _hide_panels(self) -> None:
+        """Hide status and output panels."""
+        self.query_one("#status-indicator", Static).styles.display = "none"
+        self.query_one("#output-panel", Static).styles.display = "none"
+
+    # ----------------------------------- END OF GITHUB SECTIONS ------
 
     def on_mount(self) -> None:
         self.load_json()
