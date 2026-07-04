@@ -220,7 +220,8 @@ Screen { background: $background; }
         config["FILE_CHANGE_POLL_INTERVAL"]
     )  # the interval between checking the file if there is an external change. For example, say you are checking file main.json, the moment it changes, it is updated 1 sec (default) after.
 
-    theme = config["DEFAULT_THEME"]  # nothing means using crimson demon theme
+    if config["DEFAULT_THEME"]:
+        theme = config["DEFAULT_THEME"]  # nothing means using crimson demon theme
 
     def __init__(self, json_file: str) -> None:
         super().__init__()
@@ -293,7 +294,7 @@ Screen { background: $background; }
                 self.notify("Reload due to config change", timeout=3)
 
         self.push_screen(
-            ConfigUI("config.json", default_path="default.json"),
+            ConfigUI("config.json", default_path="__default__.json"),
             callback=on_config_dismiss,
         )
 

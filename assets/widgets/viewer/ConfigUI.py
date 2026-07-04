@@ -523,6 +523,9 @@ class ConfigUI(ModalScreen[bool]):
         Binding("w", "save_config", "Save & Reload", show=True, priority=True),
         Binding("q", "quit_config", "Quit", show=True, priority=True),
         Binding(
+            "Q", "quit_config_instant", "Quit instantly", show=True, priority=False
+        ),
+        Binding(
             "U",
             "reset_default",
             "Reset Default",
@@ -780,6 +783,11 @@ class ConfigUI(ModalScreen[bool]):
             return
         outer = self.query_one("#config-outer", Container)
         outer.mount(ConfirmQuitOverlay())
+
+    def action_quit_config_instant(self) -> None:
+        """Quit Hard (q!): No confirmation"""
+        self.remove()
+        self.screen.dismiss(False)
 
     def action_reset_default(self) -> None:
         """Reset to default (U): Load default.json and repopulate."""

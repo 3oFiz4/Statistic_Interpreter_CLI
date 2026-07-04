@@ -1,0 +1,9 @@
+{
+  "APP_TITLE": "Inspecting {}",
+  "DEFAULT_THEME": "",
+  "MAX_UNDO_HISTORY:input": "50",
+  "MIN_COLUMN_WIDTH:input": "3",
+  "MAX_COLUMN_WIDTH:input": "60",
+  "DEFAULT_COL_WIDTH:input": "12",
+  "FILE_CHANGE_POLL_INTERVAL": "1.0"
+}
